@@ -3,6 +3,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Like, ILike } from 'typeorm';
@@ -16,6 +17,8 @@ import { AuditoriaService } from '../auditoria/auditoria.service';
 
 @Injectable()
 export class UsuariosService {
+  private readonly logger = new Logger(UsuariosService.name);
+
   constructor(
     @InjectRepository(Usuario)
     private readonly usuarioRepo: Repository<Usuario>,
@@ -120,6 +123,10 @@ export class UsuariosService {
       ip_cliente: ipCliente,
     });
 
+    this.logger.log(
+      `[USUARIOS] Creado nuevo usuario: ID ${guardado.id_usuario} (${guardado.correo_institucional}) | Roles: [${guardado.roles.map((r) => r.nombre).join(', ')}] por ${ejecutor?.correo || 'Sistema'}`,
+    );
+
     const { password_hash, ...resto } = guardado;
     return resto;
   }
@@ -179,6 +186,10 @@ export class UsuariosService {
       ip_cliente: ipCliente,
     });
 
+    this.logger.log(
+      `[USUARIOS] Actualizado usuario ID ${id} (${actualizado.correo_institucional}) por ${ejecutor?.correo || 'Sistema'}`,
+    );
+
     const { password_hash, ...resto } = actualizado;
     return resto;
   }
@@ -211,6 +222,10 @@ export class UsuariosService {
       valores_nuevos: { activo },
       ip_cliente: ipCliente,
     });
+
+    this.logger.log(
+      `[USUARIOS] Estado de usuario ID ${id} (${usuario.correo_institucional}) cambiado a: ${activo ? 'ACTIVO' : 'INACTIVO'} por ${ejecutor?.correo || 'Sistema'}`,
+    );
 
     return {
       mensaje: `Usuario ${activo ? 'activado' : 'desactivado'} correctamente`,
@@ -247,8 +262,49 @@ export class UsuariosService {
       ip_cliente: ipCliente,
     });
 
+    this.logger.log(
+      `[USUARIOS] Contraseña de usuario ID ${id} (${usuario.correo_institucional}) actualizada por ${ejecutor?.correo || 'Sistema'}`,
+    );
+
     return {
       mensaje: 'Contraseña actualizada correctamente por el administrador',
+    };
+  }
+
+  async eliminar(
+    id: number,
+    ejecutor?: { id_usuario: number; correo: string },
+    ipCliente?: string,
+  ) {
+    const usuario = await this.usuarioRepo.findOne({
+      where: { id_usuario: id },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+    }
+
+    usuario.activo = false;
+    await this.usuarioRepo.save(usuario);
+
+    await this.auditoriaService.registrar({
+      id_usuario: ejecutor?.id_usuario,
+      correo_usuario: ejecutor?.correo,
+      accion: 'DELETE',
+      tabla_afectada: 'usuario',
+      id_registro_afectado: String(id),
+      valores_anteriores: { activo: true },
+      valores_nuevos: { activo: false },
+      ip_cliente: ipCliente,
+    });
+
+    this.logger.log(
+      `[USUARIOS] Usuario ID ${id} (${usuario.correo_institucional}) desactivado/eliminado por ${ejecutor?.correo || 'Sistema'}`,
+    );
+
+    return {
+      mensaje: `Usuario con ID ${id} desactivado/eliminado correctamente`,
+      id_usuario: id,
     };
   }
 }

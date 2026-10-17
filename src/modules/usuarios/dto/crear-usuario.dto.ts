@@ -6,19 +6,15 @@ import {
   MinLength,
   IsArray,
   IsOptional,
-  Matches,
 } from 'class-validator';
 
 export class CrearUsuarioDto {
   @ApiProperty({
-    example: 'j.perez@uagrm.edu.bo',
-    description: 'Correo institucional UAGRM (debe terminar en @uagrm.edu.bo)',
+    example: 'alumno.ejemplo@gmail.com',
+    description: 'Correo electrónico del usuario (institucional o personal)',
   })
-  @IsEmail({}, { message: 'El correo debe tener un formato válido' })
-  @Matches(/^[a-zA-Z0-9._%+-]+@uagrm\.edu\.bo$/, {
-    message: 'El correo institucional debe pertenecer al dominio @uagrm.edu.bo',
-  })
-  @IsNotEmpty({ message: 'El correo institucional es requerido' })
+  @IsEmail({}, { message: 'El correo electrónico debe tener un formato válido' })
+  @IsNotEmpty({ message: 'El correo electrónico es requerido' })
   correo_institucional: string;
 
   @ApiProperty({

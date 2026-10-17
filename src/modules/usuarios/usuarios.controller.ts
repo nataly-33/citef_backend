@@ -4,6 +4,7 @@ import {
   Post,
   Put,
   Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -24,7 +25,7 @@ import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
 import { CambiarPasswordDto } from './dto/cambiar-password.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { Permisos } from '../auth/decorators/permisos.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Usuarios')
@@ -35,7 +36,7 @@ export class UsuariosController {
   constructor(private readonly usuariosService: UsuariosService) {}
 
   @Get()
-  @Roles('ADMINISTRADOR')
+  @Permisos('SEG_USUARIOS_VER', 'SEG_USUARIOS_CREAR', 'SEG_USUARIOS_EDITAR')
   @ApiOperation({
     summary: 'CU1: Listar usuarios del sistema con filtros y roles',
   })
@@ -52,14 +53,14 @@ export class UsuariosController {
   }
 
   @Get(':id')
-  @Roles('ADMINISTRADOR')
+  @Permisos('SEG_USUARIOS_VER', 'SEG_USUARIOS_EDITAR')
   @ApiOperation({ summary: 'CU1: Obtener detalle de usuario por ID' })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.usuariosService.findOne(id);
   }
 
   @Post()
-  @Roles('ADMINISTRADOR')
+  @Permisos('SEG_USUARIOS_CREAR')
   @ApiOperation({
     summary: 'CU1: Registrar nuevo usuario institucional con roles',
   })
@@ -73,7 +74,7 @@ export class UsuariosController {
   }
 
   @Put(':id')
-  @Roles('ADMINISTRADOR')
+  @Permisos('SEG_USUARIOS_EDITAR')
   @ApiOperation({ summary: 'CU1: Modificar datos y roles de un usuario' })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
@@ -85,7 +86,7 @@ export class UsuariosController {
   }
 
   @Patch(':id/estado')
-  @Roles('ADMINISTRADOR')
+  @Permisos('SEG_USUARIOS_EDITAR')
   @ApiOperation({ summary: 'CU1: Activar o desactivar cuenta de usuario' })
   cambiarEstado(
     @Param('id', ParseIntPipe) id: number,
@@ -97,7 +98,7 @@ export class UsuariosController {
   }
 
   @Patch(':id/cambiar-password')
-  @Roles('ADMINISTRADOR')
+  @Permisos('SEG_USUARIOS_EDITAR')
   @ApiOperation({
     summary: 'CU1: Restablecer contraseña de usuario por administrador',
   })
@@ -108,5 +109,16 @@ export class UsuariosController {
     @Ip() ip: string,
   ) {
     return this.usuariosService.cambiarPassword(id, dto, ejecutor, ip);
+  }
+
+  @Delete(':id')
+  @Permisos('SEG_USUARIOS_EDITAR')
+  @ApiOperation({ summary: 'CU1: Desactivar o eliminar usuario del sistema' })
+  eliminar(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() ejecutor: any,
+    @Ip() ip: string,
+  ) {
+    return this.usuariosService.eliminar(id, ejecutor, ip);
   }
 }
