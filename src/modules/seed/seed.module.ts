@@ -4,9 +4,10 @@ import { SeedService } from './seed.service';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Rol } from '../usuarios/entities/rol.entity';
 import { Permiso } from '../usuarios/entities/permiso.entity';
+import { TokenRecuperacion } from '../usuarios/entities/token-recuperacion.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Usuario, Rol, Permiso])],
+  imports: [TypeOrmModule.forFeature([Usuario, Rol, Permiso, TokenRecuperacion])],
   providers: [SeedService],
 })
 export class SeedModule {}

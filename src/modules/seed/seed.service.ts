@@ -157,6 +157,14 @@ export class SeedService implements OnApplicationBootstrap {
         rol: adminRol,
       },
       {
+        correo: 'nvmartinezm126@ficct.uagrm.edu.bo',
+        password: 'Admin123*',
+        nombres: 'Nataly Vanessa',
+        apellidos: 'Martinez (Resend Admin)',
+        telefono: '70012345',
+        rol: adminRol,
+      },
+      {
         correo: 'docente@uagrm.edu.bo',
         password: 'Docente123*',
         nombres: 'Carlos Alberto',
