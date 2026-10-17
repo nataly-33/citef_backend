@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { TokenRecuperacion } from '../usuarios/entities/token-recuperacion.entity';
+import { MailService } from './mail.service';
 import { AuditoriaModule } from '../auditoria/auditoria.module';
 
 @Module({
@@ -27,7 +28,7 @@ import { AuditoriaModule } from '../auditoria/auditoria.module';
     AuditoriaModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtModule, PassportModule],
+  providers: [AuthService, JwtStrategy, MailService],
+  exports: [AuthService, JwtModule, PassportModule, MailService],
 })
 export class AuthModule {}

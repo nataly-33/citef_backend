@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import { PERMISOS_KEY } from '../decorators/permisos.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -17,25 +18,53 @@ export class RolesGuard implements CanActivate {
       [context.getHandler(), context.getClass()],
     );
 
-    if (!requiredRoles || requiredRoles.length === 0) {
+    const requiredPermisos = this.reflector.getAllAndOverride<string[]>(
+      PERMISOS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    // Si la ruta no especifica ni roles ni permisos, permitir acceso
+    if (
+      (!requiredRoles || requiredRoles.length === 0) &&
+      (!requiredPermisos || requiredPermisos.length === 0)
+    ) {
       return true;
     }
 
     const { user } = context.switchToHttp().getRequest();
-    if (!user || !user.roles) {
-      throw new ForbiddenException('Acceso denegado: Usuario sin roles asignados');
+    if (!user) {
+      throw new ForbiddenException('Acceso denegado: Usuario no autenticado');
     }
 
-    const hasRole = user.roles.some((role: string) =>
-      requiredRoles.includes(role),
-    );
+    const roles: string[] = user.roles || [];
+    const permisos: string[] = user.permisos || [];
 
-    if (!hasRole) {
-      throw new ForbiddenException(
-        `Acceso denegado: Se requiere uno de los siguientes roles [${requiredRoles.join(', ')}]`,
+    // El rol ADMINISTRADOR siempre tiene acceso irrestricto
+    if (roles.includes('ADMINISTRADOR')) {
+      return true;
+    }
+
+    // Verificar permisos específicos si están definidos
+    if (requiredPermisos && requiredPermisos.length > 0) {
+      const hasPermiso = requiredPermisos.some((p) => permisos.includes(p));
+      if (hasPermiso) {
+        return true;
+      }
+    }
+
+    // Verificar roles específicos si están definidos
+    if (requiredRoles && requiredRoles.length > 0) {
+      const hasRole = roles.some((role: string) =>
+        requiredRoles.includes(role),
       );
+      if (hasRole) {
+        return true;
+      }
     }
 
-    return true;
+    throw new ForbiddenException(
+      'Acceso denegado: No cuenta con los permisos o roles necesarios para realizar esta acción',
+    );
   }
 }
+

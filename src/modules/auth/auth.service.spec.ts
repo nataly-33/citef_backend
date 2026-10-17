@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
+import { MailService } from './mail.service';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { TokenRecuperacion } from '../usuarios/entities/token-recuperacion.entity';
 import { AuditoriaService } from '../auditoria/auditoria.service';
@@ -37,6 +38,10 @@ describe('AuthService (Módulo 1: Seguridad)', () => {
         { provide: 'TokenRecuperacionRepository', useValue: mockTokenRepo },
         { provide: JwtService, useValue: mockJwtService },
         { provide: AuditoriaService, useValue: mockAuditoriaService },
+        {
+          provide: MailService,
+          useValue: { enviarEnlaceRecuperacion: jest.fn().mockResolvedValue(true) },
+        },
       ],
     }).compile();
 
@@ -106,8 +111,7 @@ describe('AuthService (Módulo 1: Seguridad)', () => {
       );
 
       expect(respuesta).toBeDefined();
-      expect(respuesta.token).toBeDefined();
-      expect(respuesta.token.length).toBe(64); // 32 bytes hex
+      expect(respuesta.mensaje).toContain('bandeja de entrada');
       expect(mockTokenRepo.save).toHaveBeenCalled();
       expect(mockAuditoriaService.registrar).toHaveBeenCalledWith(
         expect.objectContaining({

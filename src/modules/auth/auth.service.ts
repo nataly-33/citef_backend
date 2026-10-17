@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,12 +13,14 @@ import * as crypto from 'crypto';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { TokenRecuperacion } from '../usuarios/entities/token-recuperacion.entity';
 import { AuditoriaService } from '../auditoria/auditoria.service';
+import { MailService } from './mail.service';
 import { LoginDto } from './dto/login.dto';
 import { SolicitarRecuperacionDto } from './dto/solicitar-recuperacion.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   constructor(
     @InjectRepository(Usuario)
     private readonly usuarioRepo: Repository<Usuario>,
@@ -25,6 +28,7 @@ export class AuthService {
     private readonly tokenRepo: Repository<TokenRecuperacion>,
     private readonly jwtService: JwtService,
     private readonly auditoriaService: AuditoriaService,
+    private readonly mailService: MailService,
   ) {}
 
   async login(loginDto: LoginDto, ipCliente?: string) {
@@ -76,6 +80,10 @@ export class AuthService {
       ip_cliente: ipCliente,
     });
 
+    this.logger.log(
+      `[AUTH] Login exitoso: ${usuario.correo_institucional} (ID: ${usuario.id_usuario}) | Roles: [${rolesNombres.join(', ')}] | IP: ${ipCliente || '127.0.0.1'}`,
+    );
+
     return {
       access_token: accessToken,
       usuario: {
@@ -91,11 +99,14 @@ export class AuthService {
 
   async solicitarRecuperacion(dto: SolicitarRecuperacionDto, ipCliente?: string) {
     const correo = dto.correo.trim().toLowerCase();
+    this.logger.log(`[AUTH] Solicitud de recuperación de contraseña para: ${correo} (IP: ${ipCliente || '127.0.0.1'})`);
+
     const usuario = await this.usuarioRepo.findOne({
       where: { correo_institucional: correo },
     });
 
     if (!usuario) {
+      this.logger.warn(`[AUTH] Solicitud de recuperación rechazada: correo ${correo} no existe en la base de datos.`);
       throw new NotFoundException(
         `No existe ningún usuario registrado con el correo ${correo}`,
       );
@@ -117,6 +128,12 @@ export class AuthService {
 
     await this.tokenRepo.save(tokenEntity);
 
+    // Despacho de correo institucional con enlace de recuperación
+    await this.mailService.enviarEnlaceRecuperacion(
+      usuario.correo_institucional,
+      rawToken,
+    );
+
     // Auditoría
     await this.auditoriaService.registrar({
       id_usuario: usuario.id_usuario,
@@ -128,11 +145,14 @@ export class AuthService {
       ip_cliente: ipCliente,
     });
 
+    this.logger.log(
+      `[AUTH] Token de recuperación generado para ${usuario.correo_institucional} (ID Token: ${tokenEntity.id_token}, Expira: ${expiraEn.toISOString()})`,
+    );
+
     return {
       mensaje:
-        'Se ha generado el token de recuperación de contraseña con validez de 15 minutos.',
+        'Se ha enviado un enlace de recuperación a su correo electrónico. Revise su bandeja de entrada (válido por 15 minutos).',
       correo: usuario.correo_institucional,
-      token: rawToken, // En desarrollo/evaluación se expone directamente para pruebas rápidas
       expira_en: expiraEn,
     };
   }
@@ -151,6 +171,7 @@ export class AuthService {
     });
 
     if (!tokenRecup || !tokenRecup.usuario) {
+      this.logger.warn(`[AUTH] Intento fallido de restablecimiento: token inválido o expirado.`);
       throw new BadRequestException(
         'El token de recuperación es inválido o ha expirado (límite de 15 minutos superado).',
       );
@@ -178,6 +199,10 @@ export class AuthService {
       valores_nuevos: { password_actualizado: true },
       ip_cliente: ipCliente,
     });
+
+    this.logger.log(
+      `[AUTH] Contraseña restablecida exitosamente para usuario ID ${idUsuario} (${tokenRecup.usuario.correo_institucional})`,
+    );
 
     return {
       mensaje: 'Contraseña restablecida exitosamente. Ahora puede iniciar sesión.',
