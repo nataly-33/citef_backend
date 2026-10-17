@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# NestJS and TypeScript build output
+dist/
+*.tsbuildinfo
+
+# Test coverage and reports
+coverage/
+.nyc_output/
+
+# Environment variables and local secrets
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Logs and runtime files
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Tool caches
+.eslintcache
+.cache/
+.nestjs/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Local editor settings
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/*.code-snippets
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+*.tmp
