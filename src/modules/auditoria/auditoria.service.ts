@@ -41,15 +41,24 @@ export class AuditoriaService {
     correo?: string;
     limite?: number;
     pagina?: number;
+    ordenColumna?: string;
+    ordenDireccion?: 'ASC' | 'DESC';
   }) {
-    const limite = params?.limite || 50;
+    const limite = params?.limite || 15;
     const pagina = params?.pagina || 1;
     const skip = (pagina - 1) * limite;
+
+    const columna =
+      params?.ordenColumna === 'id_auditoria'
+        ? 'a.id_auditoria'
+        : 'a.fecha_hora';
+    const direccion: 'ASC' | 'DESC' =
+      params?.ordenDireccion?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
     const qb = this.auditRepo
       .createQueryBuilder('a')
       .leftJoinAndSelect('a.usuario', 'u')
-      .orderBy('a.fecha_hora', 'DESC')
+      .orderBy(columna, direccion)
       .take(limite)
       .skip(skip);
 
