@@ -534,7 +534,7 @@ citef_frontend/src/app/pages/infraestructura/
   * `id_computadora`: INT NULL REFERENCES `computadora(id_computadora)` ON DELETE SET NULL (Relación de asociación: si una PC se descarta, el periférico vuelve a inventario en bodega).
   * `tipo`: VARCHAR(30) NOT NULL (`TECLADO`, `MOUSE`, `MONITOR`, `REGULADOR`).
   * `marca_modelo`: VARCHAR(100) NOT NULL.
-  * `nro_serie`: VARCHAR(100) UNIQUE NOT NULL.
+  * `numero_activo`: VARCHAR(100) UNIQUE NOT NULL.
   * `estado`: VARCHAR(30) NOT NULL DEFAULT 'OPERATIVO' (`OPERATIVO`, `DEFECTUOSO`, `BAJA`).
 
 #### 4. Endpoints de API REST
@@ -550,7 +550,7 @@ citef_frontend/src/app/pages/infraestructura/
 
 #### 5. Errores Comunes del Usuario y Validaciones Preventivas
 * **Colisión en Cuadrícula (CU10):** Si el auxiliar arrastra una máquina sobre una coordenada `(pos_x, pos_y)` que ya está ocupada por otra máquina, el frontend debe prevenir el solapamiento visualmente y el backend debe lanzar `BadRequestException (400)` por violación de la restricción única.
-* **Periférico con Serie Duplicada (CU11):** Validar que `nro_serie` sea único antes de guardar.
+* **Periférico con Número de Activo Duplicado (CU11):** Validar que `numero_activo` sea único antes de guardar.
 * **Capacidad Máxima Excedida:** No permitir registrar más computadoras que la `cant_computadoras` declarada para la sala.
 
 ---

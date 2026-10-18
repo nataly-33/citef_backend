@@ -298,7 +298,7 @@ Modela las salas de laboratorio (con atributos booleanos directos `maquina_docen
 | `id_computadora` | `BIGINT` | NOT NULL | **FK** | Referencia a `computadora(id_computadora)`. |
 | `id_tipo_periferico` | `INTEGER` | NOT NULL | **FK** | Referencia a `tipo_periferico(id_tipo_periferico)`. |
 | `marca_modelo` | `VARCHAR(80)` | NOT NULL | - | Marca y modelo comercial (ej. `Logitech K120`). |
-| `numero_serie` | `VARCHAR(60)` | NULL | - | Número de serie del componente (si aplica). |
+| `numero_activo` | `VARCHAR(60)` | NOT NULL | **UK** | Número de activo patrimonial oficial del componente. |
 | `condicion_fisica` | `VARCHAR(20)` | NOT NULL | - | Condición operativa: `BUENO`, `REGULAR`, `DANADO`, `FALTANTE`. |
 | `actualizado_en` | `TIMESTAMP WITH TIME ZONE` | NOT NULL | - | Fecha de última inspección física. Default `NOW()`. |
 
