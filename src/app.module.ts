@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { CatalogosModule } from './modules/catalogos/catalogos.module';
 import { HttpLoggerMiddleware } from './common/middleware/http-logger.middleware';
 
 @Module({
@@ -32,6 +33,7 @@ import { HttpLoggerMiddleware } from './common/middleware/http-logger.middleware
     AuditoriaModule,
     UsuariosModule,
     AuthModule,
+    CatalogosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -5,6 +5,11 @@ import * as bcrypt from 'bcryptjs';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { Rol } from '../usuarios/entities/rol.entity';
 import { Permiso } from '../usuarios/entities/permiso.entity';
+import { Carrera } from '../catalogos/entities/carrera.entity';
+import { Materia } from '../catalogos/entities/materia.entity';
+import { HorarioOperativo } from '../catalogos/entities/horario-operativo.entity';
+import { MotivoUso } from '../catalogos/entities/motivo-uso.entity';
+import { Docente } from '../catalogos/entities/docente.entity';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
@@ -17,6 +22,16 @@ export class SeedService implements OnApplicationBootstrap {
     private readonly rolRepo: Repository<Rol>,
     @InjectRepository(Permiso)
     private readonly permisoRepo: Repository<Permiso>,
+    @InjectRepository(Carrera)
+    private readonly carreraRepo: Repository<Carrera>,
+    @InjectRepository(Materia)
+    private readonly materiaRepo: Repository<Materia>,
+    @InjectRepository(HorarioOperativo)
+    private readonly horarioRepo: Repository<HorarioOperativo>,
+    @InjectRepository(MotivoUso)
+    private readonly motivoRepo: Repository<MotivoUso>,
+    @InjectRepository(Docente)
+    private readonly docenteRepo: Repository<Docente>,
   ) {}
 
   async onApplicationBootstrap() {
@@ -24,6 +39,11 @@ export class SeedService implements OnApplicationBootstrap {
     await this.seedPermisos();
     await this.seedRoles();
     await this.seedUsuarios();
+    await this.seedCarreras();
+    await this.seedMaterias();
+    await this.seedHorarios();
+    await this.seedMotivos();
+    await this.seedDocentes();
     this.logger.log('Inicialización de datos completada exitosamente.');
   }
 
@@ -208,6 +228,179 @@ export class SeedService implements OnApplicationBootstrap {
         });
         await this.usuarioRepo.save(nuevo);
         this.logger.log(`Usuario inicial creado: ${u.correo} (Contraseña: ${u.password})`);
+      }
+    }
+  }
+
+  private async seedCarreras() {
+    const carrerasFCEE = [
+      { codigo: '186-5', nombre: 'Ingeniería Comercial' },
+      { codigo: '186-1', nombre: 'Comercio Internacional' },
+      { codigo: '186-2', nombre: 'Administración de Empresas' },
+      { codigo: '186-3', nombre: 'Economía' },
+      { codigo: '186-4', nombre: 'Ingeniería Financiera' },
+    ];
+
+    for (const c of carrerasFCEE) {
+      const existe = await this.carreraRepo.findOne({
+        where: { codigo: c.codigo },
+      });
+      if (!existe) {
+        const nueva = this.carreraRepo.create({
+          codigo: c.codigo,
+          nombre: c.nombre,
+          activo: true,
+        });
+        await this.carreraRepo.save(nueva);
+        this.logger.log(`Carrera creada: ${c.codigo} - ${c.nombre}`);
+      }
+    }
+  }
+
+  private async seedMaterias() {
+    const materiasPorCarrera: Record<
+      string,
+      Array<{ sigla: string; nombre: string; semestre_nivel: number }>
+    > = {
+      '186-5': [
+        { sigla: 'ADM100', nombre: 'Introducción a la Administración', semestre_nivel: 1 },
+        { sigla: 'MAT101', nombre: 'Cálculo I', semestre_nivel: 1 },
+        { sigla: 'COM200', nombre: 'Fundamentos de Marketing', semestre_nivel: 3 },
+        { sigla: 'COM300', nombre: 'Comercio Internacional', semestre_nivel: 5 },
+        { sigla: 'COM400', nombre: 'Investigación de Mercados', semestre_nivel: 7 },
+      ],
+      '186-1': [
+        { sigla: 'CPA100', nombre: 'Contabilidad Básica I', semestre_nivel: 1 },
+        { sigla: 'CPA200', nombre: 'Contabilidad de Costos', semestre_nivel: 3 },
+        { sigla: 'CPA300', nombre: 'Auditoría Financiera', semestre_nivel: 5 },
+        { sigla: 'CPA400', nombre: 'Gabinete de Auditoría', semestre_nivel: 7 },
+      ],
+      '186-2': [
+        { sigla: 'ADM101', nombre: 'Teoría Administrativa', semestre_nivel: 1 },
+        { sigla: 'ADM200', nombre: 'Organización y Métodos', semestre_nivel: 3 },
+        { sigla: 'ADM300', nombre: 'Gestión del Talento Humano', semestre_nivel: 5 },
+        { sigla: 'ADM400', nombre: 'Estrategia Empresarial', semestre_nivel: 7 },
+      ],
+      '186-3': [
+        { sigla: 'ECO100', nombre: 'Microeconomía I', semestre_nivel: 2 },
+        { sigla: 'ECO200', nombre: 'Macroeconomía I', semestre_nivel: 4 },
+        { sigla: 'ECO300', nombre: 'Econometría I', semestre_nivel: 6 },
+        { sigla: 'ECO400', nombre: 'Política Económica', semestre_nivel: 8 },
+      ],
+      '186-4': [
+        { sigla: 'FIN100', nombre: 'Matemática Financiera', semestre_nivel: 2 },
+        { sigla: 'FIN200', nombre: 'Finanzas Corporativas I', semestre_nivel: 4 },
+        { sigla: 'FIN300', nombre: 'Mercado de Valores', semestre_nivel: 6 },
+        { sigla: 'FIN400', nombre: 'Gestión de Riesgos Financieros', semestre_nivel: 8 },
+      ],
+    };
+
+    for (const [codCarrera, materias] of Object.entries(materiasPorCarrera)) {
+      const carrera = await this.carreraRepo.findOne({
+        where: { codigo: codCarrera },
+      });
+      if (!carrera) continue;
+
+      for (const m of materias) {
+        const existe = await this.materiaRepo.findOne({
+          where: { sigla: m.sigla, id_carrera: carrera.id_carrera },
+        });
+        if (!existe) {
+          const nueva = this.materiaRepo.create({
+            sigla: m.sigla,
+            nombre: m.nombre,
+            semestre_nivel: m.semestre_nivel,
+            id_carrera: carrera.id_carrera,
+            activo: true,
+          });
+          await this.materiaRepo.save(nueva);
+        }
+      }
+    }
+    this.logger.log('Materias de muestra sembradas para carreras de la FCEE.');
+  }
+
+  private async seedHorarios() {
+    const horariosOperativos = [
+      { turno: 'MAÑANA', hora_inicio: '07:00:00', hora_fin: '12:00:00' },
+      { turno: 'TARDE', hora_inicio: '12:00:00', hora_fin: '18:00:00' },
+      { turno: 'NOCHE', hora_inicio: '18:00:00', hora_fin: '22:00:00' },
+    ];
+
+    for (const h of horariosOperativos) {
+      const existe = await this.horarioRepo.findOne({
+        where: { turno: h.turno },
+      });
+      if (!existe) {
+        const nuevo = this.horarioRepo.create({
+          turno: h.turno,
+          hora_inicio: h.hora_inicio,
+          hora_fin: h.hora_fin,
+          activo: true,
+        });
+        await this.horarioRepo.save(nuevo);
+        this.logger.log(`Horario operativo creado: ${h.turno} (${h.hora_inicio} - ${h.hora_fin})`);
+      }
+    }
+  }
+
+  private async seedMotivos() {
+    const motivosUso = [
+      { descrip: 'Clase Práctica', tipo: 'ACADEMICO' },
+      { descrip: 'Examen Parcial', tipo: 'ACADEMICO' },
+      { descrip: 'Investigación Libre', tipo: 'LIBRE' },
+      { descrip: 'Mantenimiento', tipo: 'ADMINISTRATIVO' },
+    ];
+
+    for (const m of motivosUso) {
+      const existe = await this.motivoRepo.findOne({
+        where: { descrip: m.descrip, tipo: m.tipo },
+      });
+      if (!existe) {
+        const nuevo = this.motivoRepo.create({
+          descrip: m.descrip,
+          tipo: m.tipo,
+          activo: true,
+        });
+        await this.motivoRepo.save(nuevo);
+        this.logger.log(`Motivo de uso creado: ${m.descrip} (${m.tipo})`);
+      }
+    }
+  }
+
+  private async seedDocentes() {
+    const docentesMuestra = [
+      {
+        codigo: 'DOC-1001',
+        nombres: 'Carlos Alberto',
+        apellidos: 'Martinez Soliz',
+        correo: 'carlos.martinez@uagrm.edu.bo',
+        telefono: '77012345',
+      },
+      {
+        codigo: 'DOC-1002',
+        nombres: 'Maria Elena',
+        apellidos: 'Suarez Gomez',
+        correo: 'elena.suarez@uagrm.edu.bo',
+        telefono: '77098765',
+      },
+    ];
+
+    for (const d of docentesMuestra) {
+      const existe = await this.docenteRepo.findOne({
+        where: { codigo: d.codigo },
+      });
+      if (!existe) {
+        const nuevo = this.docenteRepo.create({
+          codigo: d.codigo,
+          nombres: d.nombres,
+          apellidos: d.apellidos,
+          correo: d.correo,
+          telefono: d.telefono,
+          activo: true,
+        });
+        await this.docenteRepo.save(nuevo);
+        this.logger.log(`Docente de muestra registrado: ${d.codigo} (${d.nombres} ${d.apellidos})`);
       }
     }
   }
