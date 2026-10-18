@@ -358,6 +358,7 @@ citef_backend/src/modules/catalogos/
 ├── entities/
 │   ├── carrera.entity.ts
 │   ├── materia.entity.ts
+│   ├── carrera-materia.entity.ts
 │   ├── docente.entity.ts
 │   ├── motivo-uso.entity.ts
 │   ├── horario-operativo.entity.ts
@@ -367,11 +368,13 @@ citef_backend/src/modules/catalogos/
 │   ├── crear-materia.dto.ts
 │   ├── crear-motivo.dto.ts
 │   ├── crear-horario.dto.ts
+│   ├── crear-docente.dto.ts
+│   ├── actualizar-docente.dto.ts
 │   └── asignar-turno.dto.ts
 ├── services/
 │   ├── carreras.service.ts
 │   ├── materias.service.ts
-│   ├── docentes-import.service.ts
+│   ├── docentes.service.ts
 │   ├── motivos.service.ts
 │   ├── horarios.service.ts
 │   └── turnos-auxiliares.service.ts
@@ -384,13 +387,13 @@ citef_backend/src/modules/catalogos/
 
 citef_frontend/src/app/pages/catalogos/
 ├── academicos/
-│   └── academicos.component.ts          # Pestañas limpias para Carreras y Materias
+│   └── academicos.component.ts          # Pestañas limpias para Carreras y Materias con soporte multi-carrera
 ├── operativos/
 │   └── operativos.component.ts          # Gestión de Franjas Horarias y Motivos de Uso
 ├── importar-docentes/
-│   └── importar-docentes.component.ts   # Carga drag & drop de Excel (.xlsx), visor preliminar y reporte de errores
+│   └── importar-docentes.component.ts   # Carga drag & drop de Excel (.xlsx), visor preliminar, reporte de errores y aviso de clave inicial
 └── turnos-auxiliares/
-    └── turnos-auxiliares.component.ts   # Asignación semestral fija (auxiliar + horario + semestre)
+    └── turnos-auxiliares.component.ts   # Asignación semestral fija (auxiliar + franja horaria + semestre)
 ```
 
 #### 3. Esquema de Base de Datos y Entidades
@@ -399,20 +402,25 @@ citef_frontend/src/app/pages/catalogos/
   * `codigo`: VARCHAR(20) UNIQUE NOT NULL (ej: `186-5`).
   * `nombre`: VARCHAR(100) NOT NULL (ej: `Ingeniería Comercial`).
   * `activo`: BOOLEAN DEFAULT TRUE.
-* **Tabla `materia`:**
+* **Tabla `materia` (Catálogo Puro de Asignaturas):**
   * `id_materia`: SERIAL PRIMARY KEY.
-  * `sigla`: VARCHAR(20) NOT NULL (ej: `MAT101`).
+  * `sigla`: VARCHAR(20) UNIQUE NOT NULL (ej: `MAT101`, `FIN200`).
   * `nombre`: VARCHAR(150) NOT NULL.
-  * `semestre_nivel`: INT NOT NULL (1 al 10).
-  * `id_carrera`: INT REFERENCES `carrera(id_carrera)`.
-  * UNIQUE (`sigla`, `id_carrera`).
-* **Tabla `docente`:**
-  * `codigo`: VARCHAR(30) PRIMARY KEY (Código único de docente UAGRM, no lleva `id_docente` artificial).
-  * `nombres`: VARCHAR(100) NOT NULL.
-  * `apellidos`: VARCHAR(100) NOT NULL.
-  * `correo`: VARCHAR(150) NOT NULL.
-  * `telefono`: VARCHAR(20) NULL.
   * `activo`: BOOLEAN DEFAULT TRUE.
+* **Tabla Asociativa `carrera_materia` (Malla Curricular N:M):**
+  * `id_carrera_materia`: SERIAL PRIMARY KEY.
+  * `id_carrera`: INT REFERENCES `carrera(id_carrera)` ON DELETE RESTRICT.
+  * `id_materia`: INT REFERENCES `materia(id_materia)` ON DELETE RESTRICT.
+  * `semestre_nivel`: INT NOT NULL (1 al 10).
+  * `activo`: BOOLEAN DEFAULT TRUE.
+  * CONSTRAINT: `UNIQUE (id_carrera, id_materia)`.
+* **Tabla `docente` (Perfil Académico 1:1 con `usuario`):**
+  * `codigo`: VARCHAR(30) PRIMARY KEY (Código de planilla docente UAGRM, llave natural).
+  * `id_usuario`: BIGINT UNIQUE NOT NULL REFERENCES `usuario(id_usuario)` ON DELETE CASCADE.
+  * `departamento_academico`: VARCHAR(100) DEFAULT 'General'.
+  * `condicion_contrato`: VARCHAR(30) DEFAULT 'TITULAR'.
+  * `activo`: BOOLEAN DEFAULT TRUE.
+  * *(Nota: Al crear o importar docentes se genera automáticamente su cuenta en `usuario` con rol `DOCENTE` y contraseña inicial predeterminada `Docente.CITEF2026*`).*
 * **Tabla `motivo_uso`:**
   * `id_motivo`: SERIAL PRIMARY KEY.
   * `descrip`: VARCHAR(100) NOT NULL (`Clase Práctica`, `Investigación Libre`, `Examen Parcial`, `Mantenimiento`).

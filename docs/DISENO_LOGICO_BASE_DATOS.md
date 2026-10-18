@@ -173,30 +173,45 @@ Administra la estructura académica de la FCEE, los padrones docentes importados
 
 ---
 
-#### 2.2. Tabla / Clase: `asignatura` (`Asignatura`)
-* **Propósito:** Malla curricular de materias prácticas y teóricas dictadas en laboratorios.
+#### 2.2. Tablas: `materia` (`Materia`) y `carrera_materia` (`CarreraMateria`)
+* **Propósito:** Desacopla el catálogo único de materias de la facultad de su asignación curricular en cada carrera (relación muchos a muchos N:M), permitiendo materias de tronco común compartidas entre distintas carreras con diferente nivel semestral.
+
+##### 2.2.1. Tabla: `materia`
 * **Diccionario de Atributos:**
 
 | Atributo | Tipo de Dato (PostgreSQL) | Nulidad | Llave | Descripción |
 | :--- | :--- | :--- | :--- | :--- |
-| `id_asignatura` | `SERIAL` | NOT NULL | **PK** | Identificador de la asignatura. |
-| `id_carrera` | `INTEGER` | NOT NULL | **FK** | Referencia a la tabla `carrera(id_carrera)`. |
-| `sigla` | `VARCHAR(15)` | NOT NULL | **UK** | Sigla académica de la materia (ej. `ECO-101`, `FIN-200`). |
-| `nombre` | `VARCHAR(120)` | NOT NULL | - | Denominación formal de la asignatura. |
-| `nivel_semestre` | `SMALLINT` | NOT NULL | - | Semestre de ubicación en la malla (1 al 10). |
+| `id_materia` | `SERIAL` | NOT NULL | **PK** | Identificador unívoco de la materia. |
+| `sigla` | `VARCHAR(20)` | NOT NULL | **UK** | Sigla académica institucional (ej. `MAT101`, `FIN200`). |
+| `nombre` | `VARCHAR(150)` | NOT NULL | - | Denominación formal de la materia. |
+| `activo` | `BOOLEAN` | NOT NULL | - | Vigencia institucional. Default `TRUE`. |
+
+##### 2.2.2. Tabla Asociativa: `carrera_materia`
+* **Diccionario de Atributos:**
+
+| Atributo | Tipo de Dato (PostgreSQL) | Nulidad | Llave | Descripción |
+| :--- | :--- | :--- | :--- | :--- |
+| `id_carrera_materia` | `SERIAL` | NOT NULL | **PK** | Identificador primario de la asociación en la malla. |
+| `id_carrera` | `INTEGER` | NOT NULL | **FK** | Referencia a `carrera(id_carrera)`. |
+| `id_materia` | `INTEGER` | NOT NULL | **FK** | Referencia a `materia(id_materia)`. |
+| `semestre_nivel` | `INTEGER` | NOT NULL | - | Semestre de ubicación en esa carrera (1 al 10). |
+| `activo` | `BOOLEAN` | NOT NULL | - | Estado de vigencia en el plan de estudios. Default `TRUE`. |
+
+> Restricción de unicidad: `UNIQUE(id_carrera, id_materia)`.
 
 ---
 
 #### 2.3. Tabla / Clase: `docente` (`Docente`)
-* **Propósito:** Registro del plantel docente (+300 profesores importados masivamente), donde su **`codigo`** institucional es la **Llave Primaria natural única**.
+* **Propósito:** Registro del plantel docente (+300 profesores importados masivamente), donde su **`codigo`** institucional es la **Llave Primaria natural única**, vinculado en relación `1 a 1` estricta con su cuenta de `usuario`. Al crearse o importarse un docente, el sistema genera automáticamente su cuenta de usuario con rol `DOCENTE` y contraseña inicial predeterminada (`Docente.CITEF2026*`).
 * **Diccionario de Atributos:**
 
 | Atributo | Tipo de Dato (PostgreSQL) | Nulidad | Llave | Descripción |
 | :--- | :--- | :--- | :--- | :--- |
-| `codigo` | `VARCHAR(30)` | NOT NULL | **PK** | Código institucional / número de planilla del docente (Llave Primaria). |
+| `codigo` | `VARCHAR(30)` | NOT NULL | **PK** | Código institucional / número de planilla del docente (Llave Primaria natural). |
 | `id_usuario` | `BIGINT` | NOT NULL | **FK, UK**| Referencia obligatoria a `usuario(id_usuario)`. |
-| `departamento_academico` | `VARCHAR(100)`| NOT NULL | - | Departamento facultativo al que está adscrito. |
+| `departamento_academico` | `VARCHAR(100)`| NOT NULL | - | Departamento facultativo al que está adscrito (ej. "Economía", "Finanzas"). |
 | `condicion_contrato` | `VARCHAR(30)` | NOT NULL | - | Condición contractual (`TITULAR`, `INVITADO`). |
+| `activo` | `BOOLEAN` | NOT NULL | - | Vigencia operativa del docente. Default `TRUE`. |
 
 ---
 
@@ -620,8 +635,8 @@ Esta matriz formaliza el modelo lógico para que Jael trace los conectores en En
 | `Rol` | `1..1` | *contiene_permiso* | `1..*` | `RolPermiso` | Asociación | Un rol agrupa una lista de permisos atómicos. |
 | `Permiso` | `1..1` | *pertenece_a* | `0..*` | `RolPermiso` | Asociación | Un permiso puede estar incluido en varios roles. |
 | `Usuario` | `1..1` | *genera_token* | `0..*` | `TokenRecuperacion` | **Composición (◆)** | Tokens criptográficos de 15 minutos dependientes del ciclo de vida del usuario (`ON DELETE CASCADE`). |
-| `Usuario` | `0..1` | *registra_auditoria*| `0..*` | `BitacoraAuditoria` | Asociación | El usuario es el autor del evento de auditoría (`ON DELETE SET NULL`). |
-| `Carrera` | `1..1` | *ofrece_materia* | `1..*` | `Asignatura` | Asociación | Materias curriculares que pueden compartirse entre carreras o multigrupos en la facultad (`RESTRICT`). NO es composición. |
+| `Carrera` | `1..1` | *ofrece_materia* | `0..*` | `CarreraMateria` | Asociación | Una carrera ofrece materias mediante su malla curricular semestral. |
+| `Materia` | `1..1` | *malla_curricular* | `0..*` | `CarreraMateria` | Asociación | Una materia única puede compartirse en múltiples planes de estudio. |
 | `Carrera` | `1..1` | *matricula* | `0..*` | `Estudiante` | Asociación | Un estudiante está inscrito formalmente en una carrera. |
 | `Usuario` | `1..1` | *perfila_docente* | `0..1` | `Docente` | Asociación | Cada docente es un usuario autenticado (`1 a 1` estricto). |
 | `LaboratorioSala` | `1..1` | *alberga_equipo* | `1..*` | `Computadora` | **Composición (◆)** | Una sala se compone físicamente de sus puestos de cómputo en cuadrícula (`ON DELETE CASCADE`). |
@@ -698,7 +713,8 @@ erDiagram
     usuario ||--o{ bitacora_auditoria : "registra_auditoria"
 
     %% MODULO 2: CATALOGOS ACADEMICOS
-    carrera ||--|{ asignatura : "ofrece_materia"
+    carrera ||--o{ carrera_materia : "ofrece_materia"
+    materia ||--o{ carrera_materia : "malla_curricular"
     carrera ||--o{ estudiante : "matricula"
     usuario ||--o| docente : "perfila_docente"
 
