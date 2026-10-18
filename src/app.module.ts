@@ -7,6 +7,7 @@ import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogosModule } from './modules/catalogos/catalogos.module';
+import { InfraestructuraModule } from './modules/infraestructura/infraestructura.module';
 import { HttpLoggerMiddleware } from './common/middleware/http-logger.middleware';
 
 @Module({
@@ -34,6 +35,7 @@ import { HttpLoggerMiddleware } from './common/middleware/http-logger.middleware
     UsuariosModule,
     AuthModule,
     CatalogosModule,
+    InfraestructuraModule,
   ],
   controllers: [AppController],
   providers: [AppService],

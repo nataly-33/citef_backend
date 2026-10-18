@@ -12,6 +12,10 @@ import { HorarioOperativo } from '../catalogos/entities/horario-operativo.entity
 import { MotivoUso } from '../catalogos/entities/motivo-uso.entity';
 import { Docente } from '../catalogos/entities/docente.entity';
 import { AsignarTurno } from '../catalogos/entities/asignar-turno.entity';
+import { LaboratorioSala } from '../infraestructura/entities/laboratorio-sala.entity';
+import { Computadora } from '../infraestructura/entities/computadora.entity';
+import { TipoPeriferico } from '../infraestructura/entities/tipo-periferico.entity';
+import { PerifericoInventario } from '../infraestructura/entities/periferico-inventario.entity';
 
 @Module({
   imports: [
@@ -27,6 +31,10 @@ import { AsignarTurno } from '../catalogos/entities/asignar-turno.entity';
       MotivoUso,
       Docente,
       AsignarTurno,
+      LaboratorioSala,
+      Computadora,
+      TipoPeriferico,
+      PerifericoInventario,
     ]),
   ],
   providers: [SeedService],

@@ -11,6 +11,10 @@ import { CarreraMateria } from '../catalogos/entities/carrera-materia.entity';
 import { HorarioOperativo } from '../catalogos/entities/horario-operativo.entity';
 import { MotivoUso } from '../catalogos/entities/motivo-uso.entity';
 import { Docente } from '../catalogos/entities/docente.entity';
+import { LaboratorioSala } from '../infraestructura/entities/laboratorio-sala.entity';
+import { Computadora } from '../infraestructura/entities/computadora.entity';
+import { TipoPeriferico } from '../infraestructura/entities/tipo-periferico.entity';
+import { PerifericoInventario } from '../infraestructura/entities/periferico-inventario.entity';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
@@ -35,6 +39,14 @@ export class SeedService implements OnApplicationBootstrap {
     private readonly motivoRepo: Repository<MotivoUso>,
     @InjectRepository(Docente)
     private readonly docenteRepo: Repository<Docente>,
+    @InjectRepository(LaboratorioSala)
+    private readonly salaRepo: Repository<LaboratorioSala>,
+    @InjectRepository(Computadora)
+    private readonly computadoraRepo: Repository<Computadora>,
+    @InjectRepository(TipoPeriferico)
+    private readonly tipoPerifericoRepo: Repository<TipoPeriferico>,
+    @InjectRepository(PerifericoInventario)
+    private readonly perifericoInventarioRepo: Repository<PerifericoInventario>,
   ) {}
 
   async onApplicationBootstrap() {
@@ -47,6 +59,7 @@ export class SeedService implements OnApplicationBootstrap {
     await this.seedHorarios();
     await this.seedMotivos();
     await this.seedDocentes();
+    await this.seedInfraestructura();
     this.logger.log('Inicialización de datos completada exitosamente.');
   }
 
@@ -440,4 +453,222 @@ export class SeedService implements OnApplicationBootstrap {
       }
     }
   }
+
+  private async seedInfraestructura() {
+    // 1. Tipos de periféricos
+    const tipos = ['TECLADO', 'MOUSE', 'MONITOR', 'ESTABILIZADOR', 'HEADSET'];
+    const tiposMap = new Map<string, TipoPeriferico>();
+
+    for (const t of tipos) {
+      let tipo = await this.tipoPerifericoRepo.findOne({ where: { nombre: t } });
+      if (!tipo) {
+        tipo = await this.tipoPerifericoRepo.save(
+          this.tipoPerifericoRepo.create({ nombre: t, activo: true }),
+        );
+        this.logger.log(`Tipo de periférico creado: ${t}`);
+      }
+      tiposMap.set(t, tipo);
+    }
+
+    // 2. Salas de Cómputo
+    const salasData = [
+      {
+        codigo_sala: 'LAB-01',
+        nombre: 'Laboratorio de Informática 1',
+        piso: 1,
+        cant_estudiantes: 24,
+        maquina_docente: true,
+        proyector: true,
+        aire_acondicionado: true,
+        filas_cuadricula: 6,
+        columnas_cuadricula: 8,
+        estado_operativo: 'OPERATIVA',
+      },
+      {
+        codigo_sala: 'LAB-02',
+        nombre: 'Laboratorio de Finanzas y Modelado 2',
+        piso: 2,
+        cant_estudiantes: 20,
+        maquina_docente: true,
+        proyector: true,
+        aire_acondicionado: true,
+        filas_cuadricula: 6,
+        columnas_cuadricula: 8,
+        estado_operativo: 'OPERATIVA',
+      },
+    ];
+
+    for (const s of salasData) {
+      let sala = await this.salaRepo.findOne({ where: { codigo_sala: s.codigo_sala } });
+      if (!sala) {
+        sala = await this.salaRepo.save(this.salaRepo.create({ ...s, activo: true }));
+        this.logger.log(`Sala creada: ${s.codigo_sala} - ${s.nombre}`);
+
+        // Si es LAB-01, generar estaciones de trabajo iniciales
+        if (s.codigo_sala === 'LAB-01') {
+          // PC Docente en fila 1, columna 4
+          const pcDocente = await this.computadoraRepo.save(
+            this.computadoraRepo.create({
+              id_sala: sala.id_sala,
+              codigo_equipo: 'L1-DOCENTE',
+              maquina_docente: true,
+              posicion_fila: 1,
+              posicion_columna: 4,
+              estado_actual: 'DISPONIBLE',
+              ip_red: '192.168.10.10',
+              mac_address: '00:1A:2B:3C:4D:00',
+              horas_uso_acumuladas: 15.5,
+              activo: true,
+            }),
+          );
+
+          // Equipos para alumnos (12 estaciones distribuidas en filas 2 a 4)
+          const pcsAlumnos: Computadora[] = [];
+          let pcIndex = 1;
+          for (let f = 2; f <= 4; f++) {
+            for (const c of [2, 3, 6, 7]) {
+              const numStr = pcIndex < 10 ? `0${pcIndex}` : `${pcIndex}`;
+              const pc = await this.computadoraRepo.save(
+                this.computadoraRepo.create({
+                  id_sala: sala.id_sala,
+                  codigo_equipo: `L1-PC${numStr}`,
+                  maquina_docente: false,
+                  posicion_fila: f,
+                  posicion_columna: c,
+                  estado_actual: 'DISPONIBLE',
+                  ip_red: `192.168.10.${10 + pcIndex}`,
+                  mac_address: `00:1A:2B:3C:4D:${numStr}`,
+                  horas_uso_acumuladas: Number((Math.random() * 20).toFixed(2)),
+                  activo: true,
+                }),
+              );
+              pcsAlumnos.push(pc);
+              pcIndex++;
+            }
+          }
+
+          // Equipar la PC docente con periféricos
+          if (tiposMap.get('MONITOR')) {
+            await this.perifericoInventarioRepo.save(
+              this.perifericoInventarioRepo.create({
+                id_computadora: pcDocente.id_computadora,
+                id_tipo_periferico: tiposMap.get('MONITOR')!.id_tipo_periferico,
+                marca_modelo: 'Dell Professional P2419H 24"',
+                numero_serie: 'CN-0K752D-74261-987-DOC',
+                condicion_fisica: 'BUENO',
+                activo: true,
+              }),
+            );
+          }
+          if (tiposMap.get('TECLADO')) {
+            await this.perifericoInventarioRepo.save(
+              this.perifericoInventarioRepo.create({
+                id_computadora: pcDocente.id_computadora,
+                id_tipo_periferico: tiposMap.get('TECLADO')!.id_tipo_periferico,
+                marca_modelo: 'Logitech K120 USB',
+                numero_serie: 'SN-LOGI-K120-DOC',
+                condicion_fisica: 'BUENO',
+                activo: true,
+              }),
+            );
+          }
+          if (tiposMap.get('MOUSE')) {
+            await this.perifericoInventarioRepo.save(
+              this.perifericoInventarioRepo.create({
+                id_computadora: pcDocente.id_computadora,
+                id_tipo_periferico: tiposMap.get('MOUSE')!.id_tipo_periferico,
+                marca_modelo: 'Logitech M100 Óptico',
+                numero_serie: 'SN-LOGI-M100-DOC',
+                condicion_fisica: 'BUENO',
+                activo: true,
+              }),
+            );
+          }
+
+          // Equipar las primeras 4 PCs de alumnos
+          for (let i = 0; i < Math.min(4, pcsAlumnos.length); i++) {
+            const pc = pcsAlumnos[i];
+            const num = i + 1;
+            if (tiposMap.get('MONITOR')) {
+              await this.perifericoInventarioRepo.save(
+                this.perifericoInventarioRepo.create({
+                  id_computadora: pc.id_computadora,
+                  id_tipo_periferico: tiposMap.get('MONITOR')!.id_tipo_periferico,
+                  marca_modelo: 'Samsung LED 22" Full HD',
+                  numero_serie: `SAM-LED22-PC0${num}`,
+                  condicion_fisica: 'BUENO',
+                  activo: true,
+                }),
+              );
+            }
+            if (tiposMap.get('TECLADO')) {
+              await this.perifericoInventarioRepo.save(
+                this.perifericoInventarioRepo.create({
+                  id_computadora: pc.id_computadora,
+                  id_tipo_periferico: tiposMap.get('TECLADO')!.id_tipo_periferico,
+                  marca_modelo: 'Genius Smart KB-100',
+                  numero_serie: `GEN-KB-PC0${num}`,
+                  condicion_fisica: 'BUENO',
+                  activo: true,
+                }),
+              );
+            }
+            if (tiposMap.get('MOUSE')) {
+              await this.perifericoInventarioRepo.save(
+                this.perifericoInventarioRepo.create({
+                  id_computadora: pc.id_computadora,
+                  id_tipo_periferico: tiposMap.get('MOUSE')!.id_tipo_periferico,
+                  marca_modelo: 'Genius DX-120 USB',
+                  numero_serie: `GEN-MS-PC0${num}`,
+                  condicion_fisica: 'BUENO',
+                  activo: true,
+                }),
+              );
+            }
+          }
+
+          // Periféricos en bodega de reserva
+          if (tiposMap.get('TECLADO')) {
+            await this.perifericoInventarioRepo.save(
+              this.perifericoInventarioRepo.create({
+                id_computadora: null,
+                id_tipo_periferico: tiposMap.get('TECLADO')!.id_tipo_periferico,
+                marca_modelo: 'Logitech K120 USB (Reserva)',
+                numero_serie: 'BOD-KB-001',
+                condicion_fisica: 'BUENO',
+                activo: true,
+              }),
+            );
+          }
+          if (tiposMap.get('MOUSE')) {
+            await this.perifericoInventarioRepo.save(
+              this.perifericoInventarioRepo.create({
+                id_computadora: null,
+                id_tipo_periferico: tiposMap.get('MOUSE')!.id_tipo_periferico,
+                marca_modelo: 'Logitech M90 USB (Reserva)',
+                numero_serie: 'BOD-MS-001',
+                condicion_fisica: 'BUENO',
+                activo: true,
+              }),
+            );
+          }
+          if (tiposMap.get('ESTABILIZADOR')) {
+            await this.perifericoInventarioRepo.save(
+              this.perifericoInventarioRepo.create({
+                id_computadora: null,
+                id_tipo_periferico: tiposMap.get('ESTABILIZADOR')!.id_tipo_periferico,
+                marca_modelo: 'Forza FVR-1001 1000VA',
+                numero_serie: 'BOD-EST-001',
+                condicion_fisica: 'BUENO',
+                activo: true,
+              }),
+            );
+          }
+
+          this.logger.log(`Equipos y periféricos iniciales cargados para ${sala.codigo_sala}`);
+        }
+      }
+    }
+  }
 }
+
