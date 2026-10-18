@@ -8,7 +8,9 @@ import {
   IsPositive,
   IsOptional,
   IsBoolean,
+  IsArray,
 } from 'class-validator';
+import { CarreraMateriaItemDto } from './crear-materia.dto';
 
 export class ActualizarMateriaDto {
   @ApiPropertyOptional({
@@ -49,6 +51,14 @@ export class ActualizarMateriaDto {
   @IsInt({ message: 'El ID de la carrera debe ser un número entero' })
   @IsPositive({ message: 'El ID de la carrera debe ser positivo' })
   id_carrera?: number;
+
+  @ApiPropertyOptional({
+    description: 'Lista de carreras y sus semestres asignados',
+    type: [CarreraMateriaItemDto],
+  })
+  @IsOptional()
+  @IsArray()
+  carreras?: CarreraMateriaItemDto[];
 
   @ApiPropertyOptional({
     example: true,

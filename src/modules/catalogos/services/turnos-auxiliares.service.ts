@@ -54,6 +54,13 @@ export class TurnosAuxiliaresService {
     return auxiliares;
   }
 
+  async listarHorariosDisponibles() {
+    return this.horarioRepo.find({
+      where: { activo: true },
+      order: { hora_inicio: 'ASC' },
+    });
+  }
+
   async findAll(params?: {
     pagina?: number;
     limite?: number;

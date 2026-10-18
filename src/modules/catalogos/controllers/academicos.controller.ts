@@ -75,6 +75,12 @@ export class AcademicosController {
     });
   }
 
+  @Get('carreras/todas')
+  @ApiOperation({ summary: 'CU5: Obtener todas las carreras activas para selectores' })
+  findAllCarrerasDropdown() {
+    return this.carrerasService.findAll({ todos: true, activo: true });
+  }
+
   @Get('carreras/:id')
   @ApiOperation({ summary: 'CU5: Obtener detalle de carrera por ID con sus materias' })
   findOneCarrera(@Param('id', ParseIntPipe) id: number) {
@@ -136,6 +142,7 @@ export class AcademicosController {
   @ApiQuery({ name: 'limite', required: false, type: Number })
   @ApiQuery({ name: 'id_carrera', required: false, type: Number })
   @ApiQuery({ name: 'semestre', required: false, type: Number })
+  @ApiQuery({ name: 'semestre_nivel', required: false, type: Number })
   @ApiQuery({ name: 'busqueda', required: false, type: String })
   @ApiQuery({ name: 'activo', required: false, type: Boolean })
   @ApiQuery({ name: 'todos', required: false, type: Boolean })
@@ -145,6 +152,7 @@ export class AcademicosController {
     @Query('limite') limite?: number,
     @Query('id_carrera') idCarrera?: number,
     @Query('semestre') semestre?: number,
+    @Query('semestre_nivel') semestreNivel?: number,
     @Query('busqueda') busqueda?: string,
     @Query('activo') activo?: string,
     @Query('todos') todos?: string,
@@ -152,16 +160,28 @@ export class AcademicosController {
     const activoBool =
       activo !== undefined ? activo === 'true' || activo === '1' : undefined;
     const todosBool = todos === 'true' || todos === '1';
+    const sem =
+      semestre !== undefined && semestre !== null && String(semestre) !== ''
+        ? Number(semestre)
+        : semestreNivel !== undefined && semestreNivel !== null && String(semestreNivel) !== ''
+        ? Number(semestreNivel)
+        : undefined;
 
     return this.materiasService.findAll({
       pagina: pagina ? Number(pagina) : 1,
       limite: limite ? Number(limite) : 15,
       id_carrera: idCarrera ? Number(idCarrera) : undefined,
-      semestre: semestre ? Number(semestre) : undefined,
+      semestre: sem,
       busqueda,
       activo: activoBool,
       todos: todosBool,
     });
+  }
+
+  @Get('materias/todas')
+  @ApiOperation({ summary: 'CU5: Obtener todas las materias activas para selectores' })
+  findAllMateriasDropdown() {
+    return this.materiasService.findAll({ todos: true, activo: true });
   }
 
   @Get('materias/:id')

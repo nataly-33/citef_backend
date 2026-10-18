@@ -4,24 +4,30 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Unique,
 } from 'typeorm';
+import { Usuario } from '../../usuarios/entities/usuario.entity';
 
 @Entity('docente')
+@Unique(['id_usuario'])
 export class Docente {
   @PrimaryColumn({ type: 'varchar', length: 30 })
   codigo: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  nombres: string;
+  @Column({ type: 'bigint', name: 'id_usuario' })
+  id_usuario: number;
 
-  @Column({ type: 'varchar', length: 100 })
-  apellidos: string;
+  @ManyToOne(() => Usuario, { eager: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'id_usuario' })
+  usuario: Usuario;
 
-  @Column({ type: 'varchar', length: 150 })
-  correo: string;
+  @Column({ type: 'varchar', length: 100, default: 'General' })
+  departamento_academico: string;
 
-  @Column({ type: 'varchar', length: 20, nullable: true })
-  telefono: string | null;
+  @Column({ type: 'varchar', length: 30, default: 'TITULAR' })
+  condicion_contrato: string;
 
   @Column({ type: 'boolean', default: true })
   activo: boolean;

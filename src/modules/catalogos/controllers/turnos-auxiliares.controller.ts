@@ -49,6 +49,18 @@ export class TurnosAuxiliaresController {
     return this.turnosService.listarAuxiliaresDisponibles();
   }
 
+  @Get('franjas-horarias')
+  @ApiOperation({
+    summary: 'CU8: Listar franjas horarias operativas activas para selectores de asignación',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de franjas horarias obtenida exitosamente',
+  })
+  listarFranjasHorarias() {
+    return this.turnosService.listarHorariosDisponibles();
+  }
+
   @Get()
   @ApiOperation({
     summary: 'CU8: Listar asignaciones semestrales de turnos con paginación de 15 filas',

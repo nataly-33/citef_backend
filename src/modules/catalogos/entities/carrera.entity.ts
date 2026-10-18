@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
-import { Materia } from './materia.entity';
+import { CarreraMateria } from './carrera-materia.entity';
 
 @Entity('carrera')
 export class Carrera {
@@ -22,8 +22,8 @@ export class Carrera {
   @Column({ type: 'boolean', default: true })
   activo: boolean;
 
-  @OneToMany(() => Materia, (m) => m.carrera)
-  materias: Materia[];
+  @OneToMany(() => CarreraMateria, (cm) => cm.carrera)
+  carreras_materias: CarreraMateria[];
 
   @CreateDateColumn({ type: 'timestamp' })
   creado_en: Date;

@@ -45,6 +45,24 @@ export class ActualizarDocenteDto {
   telefono?: string;
 
   @ApiPropertyOptional({
+    example: 'Economía',
+    description: 'Departamento académico facultativo',
+  })
+  @IsOptional()
+  @IsString({ message: 'El departamento académico debe ser una cadena de texto' })
+  @MaxLength(100, { message: 'El departamento no puede exceder los 100 caracteres' })
+  departamento_academico?: string;
+
+  @ApiPropertyOptional({
+    example: 'TITULAR',
+    description: 'Condición de contrato (TITULAR, INVITADO)',
+  })
+  @IsOptional()
+  @IsString({ message: 'La condición de contrato debe ser una cadena de texto' })
+  @MaxLength(30, { message: 'La condición no puede exceder los 30 caracteres' })
+  condicion_contrato?: string;
+
+  @ApiPropertyOptional({
     example: true,
     description: 'Estado activo/inactivo del docente',
   })

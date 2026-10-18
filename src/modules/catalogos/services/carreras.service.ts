@@ -53,7 +53,8 @@ export class CarrerasService {
 
     const qb = this.carreraRepo
       .createQueryBuilder('c')
-      .leftJoinAndSelect('c.materias', 'm')
+      .leftJoinAndSelect('c.carreras_materias', 'cm')
+      .leftJoinAndSelect('cm.materia', 'm')
       .orderBy('c.nombre', 'ASC')
       .take(limite)
       .skip(skip);
@@ -83,11 +84,14 @@ export class CarrerasService {
   async findOne(id: number) {
     const carrera = await this.carreraRepo.findOne({
       where: { id_carrera: id },
-      relations: { materias: true },
+      relations: {
+        carreras_materias: {
+          materia: true,
+        },
+      },
       order: {
-        materias: {
+        carreras_materias: {
           semestre_nivel: 'ASC',
-          sigla: 'ASC',
         },
       },
     });

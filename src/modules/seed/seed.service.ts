@@ -7,6 +7,7 @@ import { Rol } from '../usuarios/entities/rol.entity';
 import { Permiso } from '../usuarios/entities/permiso.entity';
 import { Carrera } from '../catalogos/entities/carrera.entity';
 import { Materia } from '../catalogos/entities/materia.entity';
+import { CarreraMateria } from '../catalogos/entities/carrera-materia.entity';
 import { HorarioOperativo } from '../catalogos/entities/horario-operativo.entity';
 import { MotivoUso } from '../catalogos/entities/motivo-uso.entity';
 import { Docente } from '../catalogos/entities/docente.entity';
@@ -26,6 +27,8 @@ export class SeedService implements OnApplicationBootstrap {
     private readonly carreraRepo: Repository<Carrera>,
     @InjectRepository(Materia)
     private readonly materiaRepo: Repository<Materia>,
+    @InjectRepository(CarreraMateria)
+    private readonly carreraMateriaRepo: Repository<CarreraMateria>,
     @InjectRepository(HorarioOperativo)
     private readonly horarioRepo: Repository<HorarioOperativo>,
     @InjectRepository(MotivoUso)
@@ -302,22 +305,35 @@ export class SeedService implements OnApplicationBootstrap {
       if (!carrera) continue;
 
       for (const m of materias) {
-        const existe = await this.materiaRepo.findOne({
-          where: { sigla: m.sigla, id_carrera: carrera.id_carrera },
+        let materia = await this.materiaRepo.findOne({
+          where: { sigla: m.sigla },
         });
-        if (!existe) {
-          const nueva = this.materiaRepo.create({
-            sigla: m.sigla,
-            nombre: m.nombre,
-            semestre_nivel: m.semestre_nivel,
-            id_carrera: carrera.id_carrera,
-            activo: true,
-          });
-          await this.materiaRepo.save(nueva);
+        if (!materia) {
+          materia = await this.materiaRepo.save(
+            this.materiaRepo.create({
+              sigla: m.sigla,
+              nombre: m.nombre,
+              activo: true,
+            }),
+          );
+        }
+
+        const existeCM = await this.carreraMateriaRepo.findOne({
+          where: { id_carrera: carrera.id_carrera, id_materia: materia.id_materia },
+        });
+        if (!existeCM) {
+          await this.carreraMateriaRepo.save(
+            this.carreraMateriaRepo.create({
+              id_carrera: carrera.id_carrera,
+              id_materia: materia.id_materia,
+              semestre_nivel: m.semestre_nivel,
+              activo: true,
+            }),
+          );
         }
       }
     }
-    this.logger.log('Materias de muestra sembradas para carreras de la FCEE.');
+    this.logger.log('Materias y mallas curriculares de muestra sembradas para la FCEE.');
   }
 
   private async seedHorarios() {
@@ -369,6 +385,10 @@ export class SeedService implements OnApplicationBootstrap {
   }
 
   private async seedDocentes() {
+    const PASSWORD_GENERICA_DOCENTES = 'Docente.CITEF2026*';
+    const passwordHashDocente = await bcrypt.hash(PASSWORD_GENERICA_DOCENTES, 10);
+    const rolDocente = await this.rolRepo.findOne({ where: { nombre: 'DOCENTE' } });
+
     const docentesMuestra = [
       {
         codigo: 'DOC-1001',
@@ -387,19 +407,35 @@ export class SeedService implements OnApplicationBootstrap {
     ];
 
     for (const d of docentesMuestra) {
-      const existe = await this.docenteRepo.findOne({
+      const existeDocente = await this.docenteRepo.findOne({
         where: { codigo: d.codigo },
       });
-      if (!existe) {
-        const nuevo = this.docenteRepo.create({
+      if (!existeDocente) {
+        let usuario = await this.usuarioRepo.findOne({
+          where: { correo_institucional: d.correo },
+        });
+        if (!usuario) {
+          usuario = await this.usuarioRepo.save(
+            this.usuarioRepo.create({
+              correo_institucional: d.correo,
+              password_hash: passwordHashDocente,
+              nombres: d.nombres,
+              apellidos: d.apellidos,
+              telefono: d.telefono,
+              activo: true,
+              roles: rolDocente ? [rolDocente] : [],
+            }),
+          );
+        }
+
+        const nuevoDocente = this.docenteRepo.create({
           codigo: d.codigo,
-          nombres: d.nombres,
-          apellidos: d.apellidos,
-          correo: d.correo,
-          telefono: d.telefono,
+          id_usuario: usuario.id_usuario,
+          departamento_academico: 'General',
+          condicion_contrato: 'TITULAR',
           activo: true,
         });
-        await this.docenteRepo.save(nuevo);
+        await this.docenteRepo.save(nuevoDocente);
         this.logger.log(`Docente de muestra registrado: ${d.codigo} (${d.nombres} ${d.apellidos})`);
       }
     }

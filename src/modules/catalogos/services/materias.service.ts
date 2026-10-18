@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Materia } from '../entities/materia.entity';
 import { Carrera } from '../entities/carrera.entity';
+import { CarreraMateria } from '../entities/carrera-materia.entity';
 import { CrearMateriaDto } from '../dto/crear-materia.dto';
 import { ActualizarMateriaDto } from '../dto/actualizar-materia.dto';
 import { AuditoriaService } from '../../auditoria/auditoria.service';
@@ -21,8 +22,30 @@ export class MateriasService {
     private readonly materiaRepo: Repository<Materia>,
     @InjectRepository(Carrera)
     private readonly carreraRepo: Repository<Carrera>,
+    @InjectRepository(CarreraMateria)
+    private readonly carreraMateriaRepo: Repository<CarreraMateria>,
     private readonly auditoriaService: AuditoriaService,
   ) {}
+
+  private mapMateriaResponse(materia: any) {
+    // Para retrocompatibilidad y comodidad del frontend, exponemos carrera y semestre_nivel
+    // del primer registro de la malla o null
+    const primerCM = materia.carreras_materias?.[0];
+    return {
+      ...materia,
+      id_carrera: primerCM?.id_carrera ?? null,
+      carrera: primerCM?.carrera ?? null,
+      semestre_nivel: primerCM?.semestre_nivel ?? null,
+      carreras_asociadas: (materia.carreras_materias || []).map((cm: any) => ({
+        id_carrera_materia: cm.id_carrera_materia,
+        id_carrera: cm.id_carrera,
+        codigo_carrera: cm.carrera?.codigo,
+        nombre_carrera: cm.carrera?.nombre,
+        semestre_nivel: cm.semestre_nivel,
+        activo: cm.activo,
+      })),
+    };
+  }
 
   async findAll(params?: {
     pagina?: number;
@@ -33,59 +56,20 @@ export class MateriasService {
     activo?: boolean;
     todos?: boolean;
   }) {
-    if (params?.todos) {
-      const qb = this.materiaRepo
-        .createQueryBuilder('m')
-        .leftJoinAndSelect('m.carrera', 'c')
-        .orderBy('m.semestre_nivel', 'ASC')
-        .addOrderBy('m.sigla', 'ASC');
-
-      if (params.id_carrera) {
-        qb.andWhere('m.id_carrera = :id_carrera', {
-          id_carrera: params.id_carrera,
-        });
-      }
-
-      if (params.semestre) {
-        qb.andWhere('m.semestre_nivel = :semestre', {
-          semestre: params.semestre,
-        });
-      }
-
-      if (params.activo !== undefined) {
-        qb.andWhere('m.activo = :activo', { activo: params.activo });
-      }
-
-      if (params.busqueda) {
-        qb.andWhere(
-          '(m.sigla ILIKE :q OR m.nombre ILIKE :q)',
-          { q: `%${params.busqueda}%` },
-        );
-      }
-
-      return qb.getMany();
-    }
-
-    const limite = params?.limite || 15;
-    const pagina = params?.pagina || 1;
-    const skip = (pagina - 1) * limite;
-
     const qb = this.materiaRepo
       .createQueryBuilder('m')
-      .leftJoinAndSelect('m.carrera', 'c')
-      .orderBy('m.semestre_nivel', 'ASC')
-      .addOrderBy('m.sigla', 'ASC')
-      .take(limite)
-      .skip(skip);
+      .leftJoinAndSelect('m.carreras_materias', 'cm')
+      .leftJoinAndSelect('cm.carrera', 'c')
+      .orderBy('m.sigla', 'ASC');
 
     if (params?.id_carrera) {
-      qb.andWhere('m.id_carrera = :id_carrera', {
+      qb.andWhere('cm.id_carrera = :id_carrera', {
         id_carrera: params.id_carrera,
       });
     }
 
     if (params?.semestre) {
-      qb.andWhere('m.semestre_nivel = :semestre', {
+      qb.andWhere('cm.semestre_nivel = :semestre', {
         semestre: params.semestre,
       });
     }
@@ -101,6 +85,17 @@ export class MateriasService {
       );
     }
 
+    if (params?.todos) {
+      const all = await qb.getMany();
+      return all.map((m) => this.mapMateriaResponse(m));
+    }
+
+    const limite = params?.limite || 15;
+    const pagina = params?.pagina || 1;
+    const skip = (pagina - 1) * limite;
+
+    qb.take(limite).skip(skip);
+
     const [items, total] = await qb.getManyAndCount();
 
     return {
@@ -108,21 +103,25 @@ export class MateriasService {
       pagina,
       limite,
       paginas_totales: Math.ceil(total / limite),
-      items,
+      items: items.map((m) => this.mapMateriaResponse(m)),
     };
   }
 
   async findOne(id: number) {
     const materia = await this.materiaRepo.findOne({
       where: { id_materia: id },
-      relations: { carrera: true },
+      relations: {
+        carreras_materias: {
+          carrera: true,
+        },
+      },
     });
 
     if (!materia) {
       throw new NotFoundException(`Materia con ID ${id} no encontrada`);
     }
 
-    return materia;
+    return this.mapMateriaResponse(materia);
   }
 
   async crear(
@@ -133,38 +132,56 @@ export class MateriasService {
     const sigla = dto.sigla.trim().toUpperCase();
     const nombre = dto.nombre.trim();
 
-    const carrera = await this.carreraRepo.findOne({
-      where: { id_carrera: dto.id_carrera },
-    });
-
-    if (!carrera) {
-      throw new NotFoundException(
-        `La carrera con ID ${dto.id_carrera} no existe`,
-      );
-    }
-
     const existe = await this.materiaRepo.findOne({
-      where: {
-        sigla,
-        id_carrera: dto.id_carrera,
-      },
+      where: { sigla },
     });
 
     if (existe) {
       throw new ConflictException(
-        `Ya existe una materia con la sigla ${sigla} en la carrera ${carrera.nombre}`,
+        `Ya existe una materia registrada con la sigla ${sigla} ("${existe.nombre}")`,
       );
+    }
+
+    // Resolver lista de carreras a asociar
+    let carrerasAAsociar: Array<{ id_carrera: number; semestre_nivel: number }> = [];
+    if (dto.carreras && dto.carreras.length > 0) {
+      carrerasAAsociar = dto.carreras;
+    } else if (dto.id_carrera) {
+      carrerasAAsociar = [
+        {
+          id_carrera: dto.id_carrera,
+          semestre_nivel: dto.semestre_nivel || 1,
+        },
+      ];
+    }
+
+    // Validar que existan las carreras
+    for (const ca of carrerasAAsociar) {
+      const c = await this.carreraRepo.findOne({ where: { id_carrera: ca.id_carrera } });
+      if (!c) {
+        throw new NotFoundException(`La carrera con ID ${ca.id_carrera} no existe`);
+      }
     }
 
     const nuevaMateria = this.materiaRepo.create({
       sigla,
       nombre,
-      semestre_nivel: dto.semestre_nivel,
-      id_carrera: dto.id_carrera,
       activo: dto.activo !== undefined ? dto.activo : true,
     });
 
     const guardada = await this.materiaRepo.save(nuevaMateria);
+
+    // Guardar asignaciones en carrera_materia
+    for (const ca of carrerasAAsociar) {
+      await this.carreraMateriaRepo.save(
+        this.carreraMateriaRepo.create({
+          id_carrera: ca.id_carrera,
+          id_materia: guardada.id_materia,
+          semestre_nivel: ca.semestre_nivel,
+          activo: true,
+        }),
+      );
+    }
 
     await this.auditoriaService.registrar({
       id_usuario: ejecutor?.id_usuario,
@@ -175,16 +192,14 @@ export class MateriasService {
       valores_nuevos: {
         sigla: guardada.sigla,
         nombre: guardada.nombre,
-        semestre_nivel: guardada.semestre_nivel,
-        id_carrera: guardada.id_carrera,
-        carrera: carrera.nombre,
+        carreras: carrerasAAsociar,
         activo: guardada.activo,
       },
       ip_cliente: ipCliente,
     });
 
     this.logger.log(
-      `[MATERIAS] Materia creada: ID ${guardada.id_materia} (${guardada.sigla} - ${guardada.nombre}) en Carrera ${carrera.codigo} por ${ejecutor?.correo || 'Sistema'}`,
+      `[MATERIAS] Materia creada: ID ${guardada.id_materia} (${guardada.sigla} - ${guardada.nombre}) con ${carrerasAAsociar.length} carreras por ${ejecutor?.correo || 'Sistema'}`,
     );
 
     return this.findOne(guardada.id_materia);
@@ -196,52 +211,70 @@ export class MateriasService {
     ejecutor?: { id_usuario?: number; correo?: string },
     ipCliente?: string,
   ) {
-    const materia = await this.findOne(id);
+    const materia = await this.materiaRepo.findOne({
+      where: { id_materia: id },
+      relations: { carreras_materias: true },
+    });
+
+    if (!materia) {
+      throw new NotFoundException(`Materia con ID ${id} no encontrada`);
+    }
 
     const valoresAnteriores = {
       sigla: materia.sigla,
       nombre: materia.nombre,
-      semestre_nivel: materia.semestre_nivel,
-      id_carrera: materia.id_carrera,
       activo: materia.activo,
+      carreras: materia.carreras_materias?.map((cm) => ({
+        id_carrera: cm.id_carrera,
+        semestre_nivel: cm.semestre_nivel,
+      })),
     };
 
-    const targetCarreraId = dto.id_carrera ?? materia.id_carrera;
-    const targetSigla = dto.sigla ? dto.sigla.trim().toUpperCase() : materia.sigla;
-
-    if (dto.id_carrera && dto.id_carrera !== materia.id_carrera) {
-      const carreraExiste = await this.carreraRepo.findOne({
-        where: { id_carrera: dto.id_carrera },
-      });
-      if (!carreraExiste) {
-        throw new NotFoundException(
-          `La carrera con ID ${dto.id_carrera} no existe`,
-        );
+    if (dto.sigla) {
+      const siglaNueva = dto.sigla.trim().toUpperCase();
+      if (siglaNueva !== materia.sigla) {
+        const duplicado = await this.materiaRepo.findOne({ where: { sigla: siglaNueva } });
+        if (duplicado && duplicado.id_materia !== id) {
+          throw new ConflictException(
+            `Ya existe otra materia con la sigla ${siglaNueva}`,
+          );
+        }
+        materia.sigla = siglaNueva;
       }
     }
 
-    if (targetSigla !== materia.sigla || targetCarreraId !== materia.id_carrera) {
-      const duplicado = await this.materiaRepo.findOne({
-        where: {
-          sigla: targetSigla,
-          id_carrera: targetCarreraId,
-        },
-      });
-
-      if (duplicado && duplicado.id_materia !== id) {
-        throw new ConflictException(
-          `Ya existe otra materia con la sigla ${targetSigla} registrada en esta carrera`,
-        );
-      }
-    }
-
-    materia.sigla = targetSigla;
     if (dto.nombre !== undefined) materia.nombre = dto.nombre.trim();
-    if (dto.semestre_nivel !== undefined) materia.semestre_nivel = dto.semestre_nivel;
-    if (dto.id_carrera !== undefined) materia.id_carrera = dto.id_carrera;
     if (dto.activo !== undefined) materia.activo = dto.activo;
 
     const actualizada = await this.materiaRepo.save(materia);
+
+    // Si se enviaron carreras, sincronizar carrera_materia
+    if (dto.carreras !== undefined) {
+      // Eliminar actuales y recrear
+      await this.carreraMateriaRepo.delete({ id_materia: id });
+      for (const ca of dto.carreras) {
+        await this.carreraMateriaRepo.save(
+          this.carreraMateriaRepo.create({
+            id_carrera: ca.id_carrera,
+            id_materia: id,
+            semestre_nivel: ca.semestre_nivel,
+            activo: true,
+          }),
+        );
+      }
+    } else if (dto.id_carrera !== undefined) {
+      // Caso 1 sola carrera
+      const semestre = dto.semestre_nivel || 1;
+      await this.carreraMateriaRepo.delete({ id_materia: id });
+      await this.carreraMateriaRepo.save(
+        this.carreraMateriaRepo.create({
+          id_carrera: dto.id_carrera,
+          id_materia: id,
+          semestre_nivel: semestre,
+          activo: true,
+        }),
+      );
+    }
 
     await this.auditoriaService.registrar({
       id_usuario: ejecutor?.id_usuario,
@@ -253,8 +286,6 @@ export class MateriasService {
       valores_nuevos: {
         sigla: actualizada.sigla,
         nombre: actualizada.nombre,
-        semestre_nivel: actualizada.semestre_nivel,
-        id_carrera: actualizada.id_carrera,
         activo: actualizada.activo,
       },
       ip_cliente: ipCliente,
@@ -273,7 +304,10 @@ export class MateriasService {
     ejecutor?: { id_usuario?: number; correo?: string },
     ipCliente?: string,
   ) {
-    const materia = await this.findOne(id);
+    const materia = await this.materiaRepo.findOne({ where: { id_materia: id } });
+    if (!materia) {
+      throw new NotFoundException(`Materia con ID ${id} no encontrada`);
+    }
     const estadoAnterior = materia.activo;
     materia.activo = activo;
     const guardada = await this.materiaRepo.save(materia);
@@ -293,7 +327,7 @@ export class MateriasService {
       `[MATERIAS] Materia ID ${guardada.id_materia} estado modificado a ${activo ? 'ACTIVO' : 'INACTIVO'} por ${ejecutor?.correo || 'Sistema'}`,
     );
 
-    return guardada;
+    return this.findOne(guardada.id_materia);
   }
 
   async eliminar(

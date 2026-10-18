@@ -4,14 +4,13 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
+  OneToMany,
   Unique,
 } from 'typeorm';
-import { Carrera } from './carrera.entity';
+import { CarreraMateria } from './carrera-materia.entity';
 
 @Entity('materia')
-@Unique(['sigla', 'id_carrera'])
+@Unique(['sigla'])
 export class Materia {
   @PrimaryGeneratedColumn({ name: 'id_materia' })
   id_materia: number;
@@ -22,16 +21,6 @@ export class Materia {
   @Column({ type: 'varchar', length: 150 })
   nombre: string;
 
-  @Column({ type: 'int', name: 'semestre_nivel' })
-  semestre_nivel: number;
-
-  @Column({ type: 'int', name: 'id_carrera' })
-  id_carrera: number;
-
-  @ManyToOne(() => Carrera, (c) => c.materias, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'id_carrera' })
-  carrera: Carrera;
-
   @Column({ type: 'boolean', default: true })
   activo: boolean;
 
@@ -40,4 +29,7 @@ export class Materia {
 
   @UpdateDateColumn({ type: 'timestamp' })
   actualizado_en: Date;
+
+  @OneToMany(() => CarreraMateria, (cm) => cm.materia, { cascade: true })
+  carreras_materias: CarreraMateria[];
 }

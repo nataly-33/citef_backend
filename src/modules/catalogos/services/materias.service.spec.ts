@@ -51,11 +51,19 @@ describe('MateriasService (CU5: Gestión de Materias)', () => {
       registrar: jest.fn().mockResolvedValue({ id_auditoria: 1 }),
     };
 
+    const mockCarreraMateriaRepo = {
+      findOne: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockImplementation((cm) => cm),
+      save: jest.fn().mockImplementation((cm) => Promise.resolve(cm)),
+      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MateriasService,
         { provide: 'MateriaRepository', useValue: mockMateriaRepo },
         { provide: 'CarreraRepository', useValue: mockCarreraRepo },
+        { provide: 'CarreraMateriaRepository', useValue: mockCarreraMateriaRepo },
         { provide: AuditoriaService, useValue: mockAuditoriaService },
       ],
     }).compile();

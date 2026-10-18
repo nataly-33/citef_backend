@@ -47,9 +47,12 @@ describe('DocentesService (CU7: Importación y Padrón Docente)', () => {
         rollbackTransaction: jest.fn().mockResolvedValue(undefined),
         release: jest.fn().mockResolvedValue(undefined),
         manager: {
-          findOne: jest.fn().mockResolvedValue(null),
-          create: jest.fn().mockImplementation((entity, dto) => dto),
-          save: jest.fn().mockImplementation((d) => Promise.resolve(d)),
+          findOne: jest.fn().mockImplementation((entity) => {
+            if (entity.name === 'Rol') return Promise.resolve({ id_rol: 3, nombre: 'DOCENTE' });
+            return Promise.resolve(null);
+          }),
+          create: jest.fn().mockImplementation((entity, dto) => ({ ...dto, id_usuario: 1 })),
+          save: jest.fn().mockImplementation((d) => Promise.resolve({ ...d, id_usuario: d.id_usuario || 1 })),
         },
       }),
     };
@@ -62,6 +65,8 @@ describe('DocentesService (CU7: Importación y Padrón Docente)', () => {
       providers: [
         DocentesService,
         { provide: 'DocenteRepository', useValue: mockDocenteRepo },
+        { provide: 'UsuarioRepository', useValue: { findOne: jest.fn() } },
+        { provide: 'RolRepository', useValue: { findOne: jest.fn() } },
         { provide: DataSource, useValue: mockDataSource },
         { provide: AuditoriaService, useValue: mockAuditoriaService },
       ],
@@ -89,7 +94,21 @@ describe('DocentesService (CU7: Importación y Padrón Docente)', () => {
   });
 
   it('debe crear un docente individual registrando auditoría', async () => {
-    mockDocenteRepo.findOne.mockResolvedValue(null);
+    mockDocenteRepo.findOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        codigo: 'DOC-2020',
+        id_usuario: 1,
+        departamento_academico: 'General',
+        condicion_contrato: 'TITULAR',
+        activo: true,
+        usuario: {
+          nombres: 'Mario',
+          apellidos: 'Bunge',
+          correo_institucional: 'mario.bunge@uagrm.edu.bo',
+          telefono: '70011223',
+        },
+      });
 
     const dto = {
       codigo: 'DOC-2020',

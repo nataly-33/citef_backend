@@ -33,7 +33,7 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 @ApiTags('Catálogos Operativos')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Permisos('CAT_HORARIOS_GESTIONAR')
+@Permisos('CAT_HORARIOS_GESTIONAR', 'CAT_ASIGNAR_TURNOS')
 @Controller('catalogos')
 export class OperativosController {
   constructor(
@@ -159,6 +159,14 @@ export class OperativosController {
       activo: activoBool,
       todos: todosBool,
     });
+  }
+
+  @Get('horarios/todos')
+  @ApiOperation({
+    summary: 'CU6/CU8: Listar todas las franjas horarias operativas activas para selectores',
+  })
+  findAllHorariosTodos() {
+    return this.horariosService.findAll({ todos: true, activo: true });
   }
 
   @Get('horarios/:id')

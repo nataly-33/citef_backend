@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Carrera } from './entities/carrera.entity';
 import { Materia } from './entities/materia.entity';
+import { CarreraMateria } from './entities/carrera-materia.entity';
 import { Docente } from './entities/docente.entity';
 import { MotivoUso } from './entities/motivo-uso.entity';
 import { HorarioOperativo } from './entities/horario-operativo.entity';
@@ -30,6 +31,7 @@ import {
     TypeOrmModule.forFeature([
       Carrera,
       Materia,
+      CarreraMateria,
       Docente,
       MotivoUso,
       HorarioOperativo,

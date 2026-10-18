@@ -56,6 +56,26 @@ export class CrearDocenteDto {
   telefono?: string;
 
   @ApiProperty({
+    example: 'Economía',
+    required: false,
+    description: 'Departamento académico facultativo',
+  })
+  @IsOptional()
+  @IsString({ message: 'El departamento académico debe ser una cadena de texto' })
+  @MaxLength(100, { message: 'El departamento no puede exceder los 100 caracteres' })
+  departamento_academico?: string;
+
+  @ApiProperty({
+    example: 'TITULAR',
+    required: false,
+    description: 'Condición de contrato (TITULAR, INVITADO)',
+  })
+  @IsOptional()
+  @IsString({ message: 'La condición de contrato debe ser una cadena de texto' })
+  @MaxLength(30, { message: 'La condición no puede exceder los 30 caracteres' })
+  condicion_contrato?: string;
+
+  @ApiProperty({
     example: true,
     required: false,
     description: 'Estado activo/inactivo del docente',
