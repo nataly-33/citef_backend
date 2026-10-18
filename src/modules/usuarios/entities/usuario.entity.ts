@@ -30,7 +30,7 @@ export class Usuario {
   apellidos: string;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
-  telefono: string;
+  telefono: string | null;
 
   @Column({ type: 'boolean', default: true })
   activo: boolean;
