@@ -475,12 +475,17 @@ citef_backend/src/modules/infraestructura/
 ├── entities/
 │   ├── laboratorio-sala.entity.ts
 │   ├── computadora.entity.ts
-│   └── periferico.entity.ts
+│   ├── tipo-periferico.entity.ts
+│   └── periferico-inventario.entity.ts
 ├── dto/
 │   ├── crear-sala.dto.ts
 │   ├── actualizar-sala.dto.ts
+│   ├── crear-computadora.dto.ts
+│   ├── actualizar-computadora.dto.ts
 │   ├── guardar-posiciones-computadoras.dto.ts
-│   └── registrar-periferico.dto.ts
+│   ├── registrar-periferico.dto.ts
+│   ├── actualizar-periferico.dto.ts
+│   └── asignar-periferico.dto.ts
 ├── services/
 │   ├── salas.service.ts
 │   ├── computadoras.service.ts
@@ -493,11 +498,17 @@ citef_backend/src/modules/infraestructura/
 
 citef_frontend/src/app/pages/infraestructura/
 ├── salas/
-│   └── salas.component.ts               # Listado con capacidad, piso y botón editor X/Y
+│   ├── salas.component.ts               # Lógica y control de salas con paginación
+│   ├── salas.component.html             # Listado con capacidad, piso y botón editor X/Y
+│   └── salas.component.css              # Estilos formales FCEE y validaciones en rojo
 ├── editor-cuadricula/
-│   └── editor-cuadricula.component.ts   # Grid interactivo con arrastre de puestos y guardado de coordenadas
+│   ├── editor-cuadricula.component.ts   # Control interactivo de coordenadas y prevención de colisión
+│   ├── editor-cuadricula.component.html # Grid interactivo 2D con arrastre de puestos y guardado
+│   └── editor-cuadricula.component.css  # Matriz visual, pódium frontal y tarjetas de puestos
 └── inventario-perifericos/
-    └── inventario-perifericos.component.ts # Control de periféricos por estación con filtros
+    ├── inventario-perifericos.component.ts # Control de inventario de periféricos y asignación
+    ├── inventario-perifericos.component.html # Tabla de periféricos por estación/bodega con filtros
+    └── inventario-perifericos.component.css  # Estilos, insignias y modales institucionales
 ```
 
 #### 3. Esquema de Base de Datos y Entidades
