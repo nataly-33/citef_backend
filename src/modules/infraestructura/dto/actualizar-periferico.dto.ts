@@ -1,4 +1,5 @@
 import {
+  IsNotEmpty,
   IsString,
   MaxLength,
   IsInt,
@@ -25,9 +26,10 @@ export class ActualizarPerifericoDto {
   marca_modelo?: string;
 
   @IsOptional()
-  @IsString({ message: 'El número de serie debe ser texto' })
-  @MaxLength(60, { message: 'El número de serie no puede superar 60 caracteres' })
-  numero_serie?: string;
+  @IsNotEmpty({ message: 'El número de activo es obligatorio' })
+  @IsString({ message: 'El número de activo debe ser texto' })
+  @MaxLength(60, { message: 'El número de activo no puede superar 60 caracteres' })
+  numero_activo?: string;
 
   @IsOptional()
   @IsIn(['BUENO', 'REGULAR', 'DANADO', 'FALTANTE'], {

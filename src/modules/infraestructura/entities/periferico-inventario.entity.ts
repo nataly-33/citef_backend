@@ -35,8 +35,8 @@ export class PerifericoInventario {
   @Column({ type: 'varchar', length: 80 })
   marca_modelo: string;
 
-  @Column({ type: 'varchar', length: 60, nullable: true, unique: true })
-  numero_serie: string | null;
+  @Column({ type: 'varchar', length: 60, nullable: false, unique: true })
+  numero_activo: string;
 
   @Column({ type: 'varchar', length: 20, default: 'BUENO' })
   condicion_fisica: string; // 'BUENO' | 'REGULAR' | 'DANADO' | 'FALTANTE'

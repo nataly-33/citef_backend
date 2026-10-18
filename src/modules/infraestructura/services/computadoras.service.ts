@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Computadora } from '../entities/computadora.entity';
 import { LaboratorioSala } from '../entities/laboratorio-sala.entity';
+import { PerifericoInventario } from '../entities/periferico-inventario.entity';
 import { CrearComputadoraDto } from '../dto/crear-computadora.dto';
 import { ActualizarComputadoraDto } from '../dto/actualizar-computadora.dto';
 import { GuardarPosicionesComputadorasDto } from '../dto/guardar-posiciones-computadoras.dto';
@@ -23,6 +24,8 @@ export class ComputadorasService {
     private readonly computadoraRepo: Repository<Computadora>,
     @InjectRepository(LaboratorioSala)
     private readonly salaRepo: Repository<LaboratorioSala>,
+    @InjectRepository(PerifericoInventario)
+    private readonly perifericoRepo: Repository<PerifericoInventario>,
     private readonly auditoriaService: AuditoriaService,
     private readonly dataSource: DataSource,
   ) {}
@@ -374,6 +377,13 @@ export class ComputadorasService {
     const valoresAnteriores = { ...pc };
     pc.activo = !pc.activo;
     const guardada = await this.computadoraRepo.save(pc);
+
+    if (!guardada.activo) {
+      await this.perifericoRepo.update(
+        { id_computadora: guardada.id_computadora },
+        { id_computadora: null },
+      );
+    }
 
     await this.auditoriaService.registrar({
       id_usuario: ejecutor?.id_usuario,

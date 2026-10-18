@@ -53,6 +53,7 @@ export class PerifericosService {
   async findAll(params?: {
     busqueda?: string;
     id_tipo_periferico?: number;
+    id_sala?: number;
     condicion_fisica?: string;
     id_computadora?: number;
     en_bodega?: boolean;
@@ -69,7 +70,7 @@ export class PerifericosService {
     if (params?.busqueda && params.busqueda.trim() !== '') {
       const term = `%${params.busqueda.trim().toLowerCase()}%`;
       qb.andWhere(
-        '(LOWER(p.marca_modelo) LIKE :term OR LOWER(COALESCE(p.numero_serie, \'\')) LIKE :term OR LOWER(COALESCE(c.codigo_equipo, \'\')) LIKE :term OR LOWER(COALESCE(s.nombre, \'\')) LIKE :term)',
+        '(LOWER(p.marca_modelo) LIKE :term OR LOWER(p.numero_activo) LIKE :term OR LOWER(COALESCE(c.codigo_equipo, \'\')) LIKE :term OR LOWER(COALESCE(s.nombre, \'\')) LIKE :term)',
         { term },
       );
     }
@@ -84,6 +85,10 @@ export class PerifericosService {
       qb.andWhere('p.condicion_fisica = :condicion', {
         condicion: params.condicion_fisica,
       });
+    }
+
+    if (params?.id_sala) {
+      qb.andWhere('c.id_sala = :idSala', { idSala: params.id_sala });
     }
 
     if (params?.en_bodega === true) {
@@ -150,16 +155,14 @@ export class PerifericosService {
       );
     }
 
-    if (dto.numero_serie && dto.numero_serie.trim() !== '') {
-      const serie = dto.numero_serie.trim();
-      const existeSerie = await this.perifericoRepo.findOne({
-        where: { numero_serie: serie },
-      });
-      if (existeSerie) {
-        throw new ConflictException(
-          `Ya existe un periférico registrado con el número de serie "${serie}"`,
-        );
-      }
+    const numeroActivo = dto.numero_activo.trim();
+    const existeActivo = await this.perifericoRepo.findOne({
+      where: { numero_activo: numeroActivo },
+    });
+    if (existeActivo) {
+      throw new ConflictException(
+        `Ya existe un periférico registrado con el número de activo "${numeroActivo}"`,
+      );
     }
 
     if (dto.id_computadora) {
@@ -177,7 +180,7 @@ export class PerifericosService {
       id_tipo_periferico: dto.id_tipo_periferico,
       id_computadora: dto.id_computadora ?? null,
       marca_modelo: dto.marca_modelo.trim(),
-      numero_serie: dto.numero_serie ? dto.numero_serie.trim() : null,
+      numero_activo: numeroActivo,
       condicion_fisica: dto.condicion_fisica ?? 'BUENO',
       activo: true,
     });
@@ -229,23 +232,19 @@ export class PerifericosService {
       periferico.id_tipo_periferico = dto.id_tipo_periferico;
     }
 
-    if (dto.numero_serie !== undefined) {
-      if (dto.numero_serie && dto.numero_serie.trim() !== '') {
-        const serie = dto.numero_serie.trim();
-        if (serie !== periferico.numero_serie) {
-          const existe = await this.perifericoRepo.findOne({
-            where: { numero_serie: serie },
-          });
-          if (existe) {
-            throw new ConflictException(
-              `El número de serie "${serie}" ya pertenece a otro periférico`,
-            );
-          }
+    if (dto.numero_activo !== undefined) {
+      const numeroActivo = dto.numero_activo.trim();
+      if (numeroActivo !== periferico.numero_activo) {
+        const existeActivo = await this.perifericoRepo.findOne({
+          where: { numero_activo: numeroActivo },
+        });
+        if (existeActivo) {
+          throw new ConflictException(
+            `El número de activo "${numeroActivo}" ya pertenece a otro periférico`,
+          );
         }
-        periferico.numero_serie = serie;
-      } else {
-        periferico.numero_serie = null;
       }
+      periferico.numero_activo = numeroActivo;
     }
 
     if (dto.id_computadora !== undefined) {

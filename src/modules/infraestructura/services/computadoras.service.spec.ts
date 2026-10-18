@@ -8,6 +8,7 @@ describe('ComputadorasService (CU10: Configuración de Salas y Cuadrícula)', ()
   let service: ComputadorasService;
   let mockComputadoraRepo: any;
   let mockSalaRepo: any;
+  let mockPerifericoRepo: any;
   let mockAuditoriaService: any;
   let mockDataSource: any;
 
@@ -26,6 +27,10 @@ describe('ComputadorasService (CU10: Configuración de Salas y Cuadrícula)', ()
         andWhere: jest.fn().mockReturnThis(),
         getOne: jest.fn().mockResolvedValue(null),
       }),
+    };
+
+    mockPerifericoRepo = {
+      update: jest.fn().mockResolvedValue({ affected: 2 }),
     };
 
     mockAuditoriaService = {
@@ -50,6 +55,7 @@ describe('ComputadorasService (CU10: Configuración de Salas y Cuadrícula)', ()
         ComputadorasService,
         { provide: 'ComputadoraRepository', useValue: mockComputadoraRepo },
         { provide: 'LaboratorioSalaRepository', useValue: mockSalaRepo },
+        { provide: 'PerifericoInventarioRepository', useValue: mockPerifericoRepo },
         { provide: AuditoriaService, useValue: mockAuditoriaService },
         { provide: DataSource, useValue: mockDataSource },
       ],
@@ -126,5 +132,20 @@ describe('ComputadorasService (CU10: Configuración de Salas y Cuadrícula)', ()
 
     expect(res).toBeDefined();
     expect(mockDataSource.createQueryRunner).toHaveBeenCalled();
+  });
+
+  it('debe devolver los periféricos a bodega al desactivar una computadora', async () => {
+    mockComputadoraRepo.findOne.mockResolvedValue({
+      id_computadora: 7,
+      codigo_equipo: 'LAB1-PC07',
+      activo: true,
+    });
+
+    await service.eliminar(7);
+
+    expect(mockPerifericoRepo.update).toHaveBeenCalledWith(
+      { id_computadora: 7 },
+      { id_computadora: null },
+    );
   });
 });

@@ -27,7 +27,7 @@ describe('PerifericosService (CU11: Control de Inventario de Periféricos)', () 
           {
             id_periferico: 1,
             marca_modelo: 'Logitech K120',
-            numero_serie: 'SN-001',
+            numero_activo: 'SN-001',
             condicion_fisica: 'BUENO',
             tipo: { id_tipo_periferico: 1, nombre: 'TECLADO' },
             computadora: null,
@@ -75,15 +75,15 @@ describe('PerifericosService (CU11: Control de Inventario de Periféricos)', () 
     expect(res.data).toHaveLength(1);
   });
 
-  it('debe rechazar registro con número de serie duplicado', async () => {
+  it('debe rechazar registro con número de activo duplicado', async () => {
     mockTipoRepo.findOne.mockResolvedValue({ id_tipo_periferico: 1, nombre: 'TECLADO' });
-    mockPerifericoRepo.findOne.mockResolvedValue({ id_periferico: 9, numero_serie: 'SN-001' });
+    mockPerifericoRepo.findOne.mockResolvedValue({ id_periferico: 9, numero_activo: 'SN-001' });
 
     await expect(
       service.registrar({
         id_tipo_periferico: 1,
         marca_modelo: 'Logitech K120',
-        numero_serie: 'SN-001',
+        numero_activo: 'SN-001',
       }),
     ).rejects.toThrow(ConflictException);
   });

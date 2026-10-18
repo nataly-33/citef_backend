@@ -42,6 +42,7 @@ export class PerifericosController {
   findAll(
     @Query('busqueda') busqueda?: string,
     @Query('id_tipo_periferico') id_tipo_periferico?: string,
+    @Query('id_sala') id_sala?: string,
     @Query('condicion_fisica') condicion_fisica?: string,
     @Query('id_computadora') id_computadora?: string,
     @Query('en_bodega') en_bodega?: string,
@@ -52,6 +53,7 @@ export class PerifericosController {
     return this.perifericosService.findAll({
       busqueda,
       id_tipo_periferico: id_tipo_periferico ? parseInt(id_tipo_periferico, 10) : undefined,
+      id_sala: id_sala ? parseInt(id_sala, 10) : undefined,
       condicion_fisica,
       id_computadora: id_computadora ? parseInt(id_computadora, 10) : undefined,
       en_bodega: en_bodega === 'true',
