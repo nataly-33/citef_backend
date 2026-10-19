@@ -46,6 +46,12 @@ export class AcademicosController {
   // ----------------------------------------------------
 
   @Get('carreras')
+  @Permisos(
+    'CAT_ACADEMICOS_GESTIONAR',
+    'TIEMPOREAL_ASIGNAR',
+    'TIEMPOREAL_MONITOREAR',
+    'TIEMPOREAL_ASISTENCIAS',
+  )
   @ApiOperation({
     summary: 'CU5: Listar carreras académicas con paginación de 15 filas y búsqueda',
   })
@@ -76,12 +82,24 @@ export class AcademicosController {
   }
 
   @Get('carreras/todas')
+  @Permisos(
+    'CAT_ACADEMICOS_GESTIONAR',
+    'TIEMPOREAL_ASIGNAR',
+    'TIEMPOREAL_MONITOREAR',
+    'TIEMPOREAL_ASISTENCIAS',
+  )
   @ApiOperation({ summary: 'CU5: Obtener todas las carreras activas para selectores' })
   findAllCarrerasDropdown() {
     return this.carrerasService.findAll({ todos: true, activo: true });
   }
 
   @Get('carreras/:id')
+  @Permisos(
+    'CAT_ACADEMICOS_GESTIONAR',
+    'TIEMPOREAL_ASIGNAR',
+    'TIEMPOREAL_MONITOREAR',
+    'TIEMPOREAL_ASISTENCIAS',
+  )
   @ApiOperation({ summary: 'CU5: Obtener detalle de carrera por ID con sus materias' })
   findOneCarrera(@Param('id', ParseIntPipe) id: number) {
     return this.carrerasService.findOne(id);
@@ -135,6 +153,12 @@ export class AcademicosController {
   // ----------------------------------------------------
 
   @Get('materias')
+  @Permisos(
+    'CAT_ACADEMICOS_GESTIONAR',
+    'TIEMPOREAL_ASIGNAR',
+    'TIEMPOREAL_MONITOREAR',
+    'TIEMPOREAL_ASISTENCIAS',
+  )
   @ApiOperation({
     summary: 'CU5: Listar materias con filtro por carrera, semestre y paginación',
   })
@@ -179,12 +203,24 @@ export class AcademicosController {
   }
 
   @Get('materias/todas')
+  @Permisos(
+    'CAT_ACADEMICOS_GESTIONAR',
+    'TIEMPOREAL_ASIGNAR',
+    'TIEMPOREAL_MONITOREAR',
+    'TIEMPOREAL_ASISTENCIAS',
+  )
   @ApiOperation({ summary: 'CU5: Obtener todas las materias activas para selectores' })
   findAllMateriasDropdown() {
     return this.materiasService.findAll({ todos: true, activo: true });
   }
 
   @Get('materias/:id')
+  @Permisos(
+    'CAT_ACADEMICOS_GESTIONAR',
+    'TIEMPOREAL_ASIGNAR',
+    'TIEMPOREAL_MONITOREAR',
+    'TIEMPOREAL_ASISTENCIAS',
+  )
   @ApiOperation({ summary: 'CU5: Obtener detalle de materia por ID' })
   findOneMateria(@Param('id', ParseIntPipe) id: number) {
     return this.materiasService.findOne(id);

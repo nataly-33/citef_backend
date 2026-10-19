@@ -16,6 +16,9 @@ import { LaboratorioSala } from '../infraestructura/entities/laboratorio-sala.en
 import { Computadora } from '../infraestructura/entities/computadora.entity';
 import { TipoPeriferico } from '../infraestructura/entities/tipo-periferico.entity';
 import { PerifericoInventario } from '../infraestructura/entities/periferico-inventario.entity';
+import { Estudiante } from '../ocupacion/entities/estudiante.entity';
+import { AsignacionSesion } from '../ocupacion/entities/asignacion-sesion.entity';
+import { ColaEsperaSala } from '../ocupacion/entities/cola-espera-sala.entity';
 
 @Module({
   imports: [
@@ -35,6 +38,9 @@ import { PerifericoInventario } from '../infraestructura/entities/periferico-inv
       Computadora,
       TipoPeriferico,
       PerifericoInventario,
+      Estudiante,
+      AsignacionSesion,
+      ColaEsperaSala,
     ]),
   ],
   providers: [SeedService],

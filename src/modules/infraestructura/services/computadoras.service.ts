@@ -10,6 +10,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Computadora } from '../entities/computadora.entity';
 import { LaboratorioSala } from '../entities/laboratorio-sala.entity';
 import { PerifericoInventario } from '../entities/periferico-inventario.entity';
+import { AsignacionSesion } from '../../ocupacion/entities/asignacion-sesion.entity';
 import { CrearComputadoraDto } from '../dto/crear-computadora.dto';
 import { ActualizarComputadoraDto } from '../dto/actualizar-computadora.dto';
 import { GuardarPosicionesComputadorasDto } from '../dto/guardar-posiciones-computadoras.dto';
@@ -26,6 +27,8 @@ export class ComputadorasService {
     private readonly salaRepo: Repository<LaboratorioSala>,
     @InjectRepository(PerifericoInventario)
     private readonly perifericoRepo: Repository<PerifericoInventario>,
+    @InjectRepository(AsignacionSesion)
+    private readonly sesionRepo: Repository<AsignacionSesion>,
     private readonly auditoriaService: AuditoriaService,
     private readonly dataSource: DataSource,
   ) {}
@@ -51,9 +54,48 @@ export class ComputadorasService {
       },
     });
 
+    const sesionesActivas = await this.sesionRepo.find({
+      where: {
+        estado: 'EN_CURSO',
+      },
+      relations: {
+        estudiante: { carrera: true },
+        motivo: true,
+      },
+    });
+
+    const sesionPorPc = new Map<number, AsignacionSesion>();
+    for (const s of sesionesActivas) {
+      sesionPorPc.set(Number(s.id_computadora), s);
+    }
+
+    const computadorasConSesion = computadoras.map((pc) => {
+      const s = sesionPorPc.get(Number(pc.id_computadora));
+      if (!s) return pc;
+      const ahora = new Date();
+      const minutosTranscurridos = Math.max(
+        1,
+        Math.round((ahora.getTime() - new Date(s.fecha_hora_inicio).getTime()) / 60000),
+      );
+      return {
+        ...pc,
+        sesion_activa: {
+          id_asignacion: s.id_asignacion,
+          registro_estudiante: s.registro_estudiante,
+          estudiante_nombres: s.estudiante
+            ? `${s.estudiante.nombres} ${s.estudiante.apellidos}`
+            : 'Estudiante',
+          carrera_nombre: s.estudiante?.carrera?.nombre || 'General',
+          motivo_descrip: s.motivo?.descrip || 'Uso libre',
+          fecha_hora_inicio: s.fecha_hora_inicio,
+          minutos_transcurridos: minutosTranscurridos,
+        },
+      };
+    });
+
     return {
       sala,
-      computadoras,
+      computadoras: computadorasConSesion,
     };
   }
 
@@ -70,6 +112,33 @@ export class ComputadorasService {
 
     if (!pc) {
       throw new NotFoundException(`Computadora con ID ${id} no encontrada`);
+    }
+
+    const s = await this.sesionRepo.findOne({
+      where: { id_computadora: id, estado: 'EN_CURSO' },
+      relations: { estudiante: { carrera: true }, motivo: true },
+    });
+
+    if (s) {
+      const ahora = new Date();
+      const minutosTranscurridos = Math.max(
+        1,
+        Math.round((ahora.getTime() - new Date(s.fecha_hora_inicio).getTime()) / 60000),
+      );
+      return {
+        ...pc,
+        sesion_activa: {
+          id_asignacion: s.id_asignacion,
+          registro_estudiante: s.registro_estudiante,
+          estudiante_nombres: s.estudiante
+            ? `${s.estudiante.nombres} ${s.estudiante.apellidos}`
+            : 'Estudiante',
+          carrera_nombre: s.estudiante?.carrera?.nombre || 'General',
+          motivo_descrip: s.motivo?.descrip || 'Uso libre',
+          fecha_hora_inicio: s.fecha_hora_inicio,
+          minutos_transcurridos: minutosTranscurridos,
+        },
+      };
     }
 
     return pc;
@@ -235,6 +304,60 @@ export class ComputadorasService {
       pc.posicion_columna = nuevaCol;
     }
 
+    // Si cambia de estado y deja de estar OCUPADA (o se desactiva), concluir cualquier sesión en curso
+    const sesionActiva = await this.sesionRepo.findOne({
+      where: {
+        id_computadora: id,
+        estado: 'EN_CURSO',
+      },
+      relations: { estudiante: true },
+    });
+
+    if (
+      sesionActiva &&
+      ((dto.estado_actual !== undefined && dto.estado_actual !== 'OCUPADA') || dto.activo === false)
+    ) {
+      const ahora = new Date();
+      const minutosUso = Math.max(
+        1,
+        Math.round((ahora.getTime() - new Date(sesionActiva.fecha_hora_inicio).getTime()) / 60000),
+      );
+      const horasAdicionales = minutosUso / 60.0;
+
+      sesionActiva.fecha_hora_fin = ahora;
+      sesionActiva.minutos_permanencia = minutosUso;
+      sesionActiva.estado = 'CONCLUIDA';
+      sesionActiva.observaciones =
+        (sesionActiva.observaciones ? `${sesionActiva.observaciones} | ` : '') +
+        `Sesión finalizada administrativamente por cambio de estado a "${dto.estado_actual || 'INACTIVA'}" desde editor de cuadrícula.`;
+      await this.sesionRepo.save(sesionActiva);
+
+      if (dto.horas_uso_acumuladas === undefined) {
+        pc.horas_uso_acumuladas = Number(
+          (Number(pc.horas_uso_acumuladas || 0) + horasAdicionales).toFixed(2),
+        );
+      }
+
+      await this.auditoriaService.registrar({
+        id_usuario: ejecutor?.id_usuario,
+        correo_usuario: ejecutor?.correo || 'sistema@uagrm.edu.bo',
+        accion: 'LIBERAR_EQUIPO_COMPUTO',
+        tabla_afectada: 'asignacion_sesion',
+        id_registro_afectado: String(sesionActiva.id_asignacion),
+        valores_anteriores: { estado: 'EN_CURSO' },
+        valores_nuevos: {
+          estado: 'CONCLUIDA',
+          minutos_permanencia: minutosUso,
+          motivo_cierre: `Cambio de estado administrativo a ${dto.estado_actual || 'INACTIVA'}`,
+        },
+        ip_cliente: ipCliente,
+      });
+
+      this.logger.log(
+        `[COMPUTADORAS] Sesión #${sesionActiva.id_asignacion} de ${sesionActiva.registro_estudiante} concluida automáticamente (${minutosUso} min) en PC ${pc.codigo_equipo}`,
+      );
+    }
+
     if (dto.maquina_docente !== undefined) pc.maquina_docente = dto.maquina_docente;
     if (dto.estado_actual !== undefined) pc.estado_actual = dto.estado_actual;
     if (dto.ip_red !== undefined) pc.ip_red = dto.ip_red ? dto.ip_red.trim() : null;
@@ -379,6 +502,30 @@ export class ComputadorasService {
     const guardada = await this.computadoraRepo.save(pc);
 
     if (!guardada.activo) {
+      const sesionActiva = await this.sesionRepo.findOne({
+        where: { id_computadora: id, estado: 'EN_CURSO' },
+        relations: { estudiante: true },
+      });
+      if (sesionActiva) {
+        const ahora = new Date();
+        const minutosUso = Math.max(
+          1,
+          Math.round((ahora.getTime() - new Date(sesionActiva.fecha_hora_inicio).getTime()) / 60000),
+        );
+        sesionActiva.fecha_hora_fin = ahora;
+        sesionActiva.minutos_permanencia = minutosUso;
+        sesionActiva.estado = 'CONCLUIDA';
+        sesionActiva.observaciones =
+          (sesionActiva.observaciones ? `${sesionActiva.observaciones} | ` : '') +
+          'Sesión finalizada automáticamente por desactivación/retiro de equipo.';
+        await this.sesionRepo.save(sesionActiva);
+
+        guardada.horas_uso_acumuladas = Number(
+          (Number(guardada.horas_uso_acumuladas || 0) + minutosUso / 60.0).toFixed(2),
+        );
+        await this.computadoraRepo.save(guardada);
+      }
+
       await this.perifericoRepo.update(
         { id_computadora: guardada.id_computadora },
         { id_computadora: null },

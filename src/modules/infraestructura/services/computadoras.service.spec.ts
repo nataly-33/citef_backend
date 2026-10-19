@@ -37,6 +37,12 @@ describe('ComputadorasService (CU10: Configuración de Salas y Cuadrícula)', ()
       registrar: jest.fn().mockResolvedValue({ id_auditoria: 1 }),
     };
 
+    const mockSesionRepo = {
+      findOne: jest.fn().mockResolvedValue(null),
+      find: jest.fn().mockResolvedValue([]),
+      save: jest.fn().mockImplementation((s) => Promise.resolve(s)),
+    };
+
     mockDataSource = {
       createQueryRunner: jest.fn().mockReturnValue({
         connect: jest.fn().mockResolvedValue(undefined),
@@ -56,6 +62,7 @@ describe('ComputadorasService (CU10: Configuración de Salas y Cuadrícula)', ()
         { provide: 'ComputadoraRepository', useValue: mockComputadoraRepo },
         { provide: 'LaboratorioSalaRepository', useValue: mockSalaRepo },
         { provide: 'PerifericoInventarioRepository', useValue: mockPerifericoRepo },
+        { provide: 'AsignacionSesionRepository', useValue: mockSesionRepo },
         { provide: AuditoriaService, useValue: mockAuditoriaService },
         { provide: DataSource, useValue: mockDataSource },
       ],

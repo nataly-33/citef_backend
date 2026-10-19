@@ -46,6 +46,13 @@ export class OperativosController {
   // ----------------------------------------------------
 
   @Get('motivos')
+  @Permisos(
+    'CAT_HORARIOS_GESTIONAR',
+    'CAT_ASIGNAR_TURNOS',
+    'TIEMPOREAL_ASIGNAR',
+    'TIEMPOREAL_MONITOREAR',
+    'TIEMPOREAL_ASISTENCIAS',
+  )
   @ApiOperation({
     summary: 'CU6: Listar motivos de uso con filtro por tipo y paginación de 15 filas',
   })
@@ -79,6 +86,13 @@ export class OperativosController {
   }
 
   @Get('motivos/:id')
+  @Permisos(
+    'CAT_HORARIOS_GESTIONAR',
+    'CAT_ASIGNAR_TURNOS',
+    'TIEMPOREAL_ASIGNAR',
+    'TIEMPOREAL_MONITOREAR',
+    'TIEMPOREAL_ASISTENCIAS',
+  )
   @ApiOperation({ summary: 'CU6: Obtener detalle de motivo por ID' })
   findOneMotivo(@Param('id', ParseIntPipe) id: number) {
     return this.motivosService.findOne(id);

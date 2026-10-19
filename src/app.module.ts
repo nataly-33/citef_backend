@@ -8,6 +8,8 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogosModule } from './modules/catalogos/catalogos.module';
 import { InfraestructuraModule } from './modules/infraestructura/infraestructura.module';
+import { OcupacionModule } from './modules/ocupacion/ocupacion.module';
+import { SeedModule } from './modules/seed/seed.module';
 import { HttpLoggerMiddleware } from './common/middleware/http-logger.middleware';
 
 @Module({
@@ -36,6 +38,8 @@ import { HttpLoggerMiddleware } from './common/middleware/http-logger.middleware
     AuthModule,
     CatalogosModule,
     InfraestructuraModule,
+    OcupacionModule,
+    SeedModule,
   ],
   controllers: [AppController],
   providers: [AppService],

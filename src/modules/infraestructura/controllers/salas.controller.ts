@@ -29,7 +29,13 @@ export class SalasController {
   ) {}
 
   @Get()
-  @Permisos('INFRA_LABS_GESTIONAR', 'INFRA_SALAS_CONFIGURAR', 'INFRA_INVENTARIO_GESTIONAR')
+  @Permisos(
+    'INFRA_LABS_GESTIONAR',
+    'INFRA_SALAS_CONFIGURAR',
+    'INFRA_INVENTARIO_GESTIONAR',
+    'TIEMPOREAL_MONITOREAR',
+    'TIEMPOREAL_ASIGNAR',
+  )
   findAll(
     @Query('busqueda') busqueda?: string,
     @Query('piso') piso?: string,
@@ -45,7 +51,13 @@ export class SalasController {
   }
 
   @Get(':id')
-  @Permisos('INFRA_LABS_GESTIONAR', 'INFRA_SALAS_CONFIGURAR', 'INFRA_INVENTARIO_GESTIONAR')
+  @Permisos(
+    'INFRA_LABS_GESTIONAR',
+    'INFRA_SALAS_CONFIGURAR',
+    'INFRA_INVENTARIO_GESTIONAR',
+    'TIEMPOREAL_MONITOREAR',
+    'TIEMPOREAL_ASIGNAR',
+  )
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.salasService.findOne(id);
   }
@@ -73,7 +85,13 @@ export class SalasController {
   }
 
   @Get(':id/computadoras')
-  @Permisos('INFRA_LABS_GESTIONAR', 'INFRA_SALAS_CONFIGURAR', 'INFRA_INVENTARIO_GESTIONAR')
+  @Permisos(
+    'INFRA_LABS_GESTIONAR',
+    'INFRA_SALAS_CONFIGURAR',
+    'INFRA_INVENTARIO_GESTIONAR',
+    'TIEMPOREAL_MONITOREAR',
+    'TIEMPOREAL_ASIGNAR',
+  )
   getComputadoras(@Param('id', ParseIntPipe) id: number) {
     return this.computadorasService.findBySala(id);
   }

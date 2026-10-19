@@ -15,6 +15,9 @@ import { LaboratorioSala } from '../infraestructura/entities/laboratorio-sala.en
 import { Computadora } from '../infraestructura/entities/computadora.entity';
 import { TipoPeriferico } from '../infraestructura/entities/tipo-periferico.entity';
 import { PerifericoInventario } from '../infraestructura/entities/periferico-inventario.entity';
+import { Estudiante } from '../ocupacion/entities/estudiante.entity';
+import { AsignacionSesion } from '../ocupacion/entities/asignacion-sesion.entity';
+import { ColaEsperaSala } from '../ocupacion/entities/cola-espera-sala.entity';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
@@ -47,6 +50,12 @@ export class SeedService implements OnApplicationBootstrap {
     private readonly tipoPerifericoRepo: Repository<TipoPeriferico>,
     @InjectRepository(PerifericoInventario)
     private readonly perifericoInventarioRepo: Repository<PerifericoInventario>,
+    @InjectRepository(Estudiante)
+    private readonly estudianteRepo: Repository<Estudiante>,
+    @InjectRepository(AsignacionSesion)
+    private readonly sesionRepo: Repository<AsignacionSesion>,
+    @InjectRepository(ColaEsperaSala)
+    private readonly colaRepo: Repository<ColaEsperaSala>,
   ) {}
 
   async onApplicationBootstrap() {
@@ -60,6 +69,8 @@ export class SeedService implements OnApplicationBootstrap {
     await this.seedMotivos();
     await this.seedDocentes();
     await this.seedInfraestructura();
+    await this.seedEstudiantes();
+    await this.seedSesionesIniciales();
     this.logger.log('Inicialización de datos completada exitosamente.');
   }
 
@@ -669,6 +680,226 @@ export class SeedService implements OnApplicationBootstrap {
         }
       }
     }
+  }
+
+  private async seedEstudiantes() {
+    const total = await this.estudianteRepo.count();
+    if (total > 0) return;
+
+    const carreras = await this.carreraRepo.find();
+    if (!carreras.length) return;
+
+    const c1 = carreras[0]?.id_carrera || 1;
+    const c2 = carreras[1]?.id_carrera || c1;
+    const c3 = carreras[2]?.id_carrera || c1;
+    const c4 = carreras[3]?.id_carrera || c1;
+    const c5 = carreras[4]?.id_carrera || c1;
+
+    const estudiantes = [
+      {
+        registro: '220011501',
+        ci: '8492019',
+        nombres: 'CARLOS ANDRÉS',
+        apellidos: 'VARGAS PINTO',
+        correo: 'carlos.vargas@uagrm.edu.bo',
+        id_carrera: c1,
+        sancionado: false,
+        motivo_sancion: null,
+      },
+      {
+        registro: '220011502',
+        ci: '7381920',
+        nombres: 'MARIANA SILVANA',
+        apellidos: 'CLAURE ROJAS',
+        correo: 'mariana.claure@uagrm.edu.bo',
+        id_carrera: c2,
+        sancionado: false,
+        motivo_sancion: null,
+      },
+      {
+        registro: '220011503',
+        ci: '6372819',
+        nombres: 'JORGE LUIS',
+        apellidos: 'MENDOZA CÉSPEDES',
+        correo: 'jorge.mendoza@uagrm.edu.bo',
+        id_carrera: c3,
+        sancionado: false,
+        motivo_sancion: null,
+      },
+      {
+        registro: '220011504',
+        ci: '9283710',
+        nombres: 'VALERIA ANDREA',
+        apellidos: 'SUAREZ ANTELO',
+        correo: 'valeria.suarez@uagrm.edu.bo',
+        id_carrera: c4,
+        sancionado: false,
+        motivo_sancion: null,
+      },
+      {
+        registro: '220011505',
+        ci: '8472910',
+        nombres: 'MAURICIO ESTEBAN',
+        apellidos: 'ROCA JUSTINIANO',
+        correo: 'mauricio.roca@uagrm.edu.bo',
+        id_carrera: c5,
+        sancionado: false,
+        motivo_sancion: null,
+      },
+      {
+        registro: '220011506',
+        ci: '7364810',
+        nombres: 'CAMILA NICOLE',
+        apellidos: 'HURTADO AGUILERA',
+        correo: 'camila.hurtado@uagrm.edu.bo',
+        id_carrera: c1,
+        sancionado: false,
+        motivo_sancion: null,
+      },
+      {
+        registro: '220011507',
+        ci: '6251829',
+        nombres: 'DIEGO ALEJANDRO',
+        apellidos: 'BARBA VACA',
+        correo: 'diego.barba@uagrm.edu.bo',
+        id_carrera: c2,
+        sancionado: false,
+        motivo_sancion: null,
+      },
+      {
+        registro: '220011508',
+        ci: '5463728',
+        nombres: 'PAOLA STEPHANIE',
+        apellidos: 'MORENO CUELLAR',
+        correo: 'paola.moreno@uagrm.edu.bo',
+        id_carrera: c3,
+        sancionado: false,
+        motivo_sancion: null,
+      },
+      {
+        registro: '220011509',
+        ci: '7362514',
+        nombres: 'RODRIGO SEBASTIAN',
+        apellidos: 'ORTIZ PARADA',
+        correo: 'rodrigo.ortiz@uagrm.edu.bo',
+        id_carrera: c4,
+        sancionado: true,
+        motivo_sancion: 'Investigación técnica pendiente por avería reportada en teclado de sala',
+      },
+      {
+        registro: '220011510',
+        ci: '8473625',
+        nombres: 'FERNANDA LUCIANA',
+        apellidos: 'SALVATIERRA RIOS',
+        correo: 'fernanda.salvatierra@uagrm.edu.bo',
+        id_carrera: c5,
+        sancionado: false,
+        motivo_sancion: null,
+      },
+    ];
+
+    for (const est of estudiantes) {
+      await this.estudianteRepo.save(this.estudianteRepo.create(est));
+    }
+    this.logger.log('Padrón inicial de 10 estudiantes de prueba cargado.');
+  }
+
+  private async seedSesionesIniciales() {
+    const total = await this.sesionRepo.count();
+    if (total > 0) return;
+
+    const pcs = await this.computadoraRepo.find({
+      where: { activo: true, maquina_docente: false },
+      take: 5,
+    });
+    if (!pcs.length) return;
+
+    const motivos = await this.motivoRepo.find();
+    const motivoId = motivos[0]?.id_motivo || 1;
+
+    const aux = await this.usuarioRepo.findOne({
+      where: { correo_institucional: 'auxiliar@uagrm.edu.bo' },
+    });
+    const idAux = aux?.id_usuario || 1;
+
+    const ahora = new Date();
+
+    // 1. Sesión activa para PC 0
+    if (pcs[0]) {
+      pcs[0].estado_actual = 'OCUPADA';
+      await this.computadoraRepo.save(pcs[0]);
+
+      const inicioActiva1 = new Date(ahora.getTime() - 35 * 60000); // Hace 35 min
+      await this.sesionRepo.save(
+        this.sesionRepo.create({
+          id_computadora: pcs[0].id_computadora,
+          registro_estudiante: '220011501',
+          id_motivo: motivoId,
+          id_usuario_auxiliar: idAux,
+          fecha_hora_inicio: inicioActiva1,
+          estado: 'EN_CURSO',
+          asignacion_automatica: false,
+        }),
+      );
+    }
+
+    // 2. Sesión activa para PC 1
+    if (pcs[1]) {
+      pcs[1].estado_actual = 'OCUPADA';
+      await this.computadoraRepo.save(pcs[1]);
+
+      const inicioActiva2 = new Date(ahora.getTime() - 15 * 60000); // Hace 15 min
+      await this.sesionRepo.save(
+        this.sesionRepo.create({
+          id_computadora: pcs[1].id_computadora,
+          registro_estudiante: '220011502',
+          id_motivo: motivoId,
+          id_usuario_auxiliar: idAux,
+          fecha_hora_inicio: inicioActiva2,
+          estado: 'EN_CURSO',
+          asignacion_automatica: true,
+        }),
+      );
+    }
+
+    // 3. Sesiones concluidas históricas
+    if (pcs[2]) {
+      const inicioH1 = new Date(ahora.getTime() - 180 * 60000);
+      const finH1 = new Date(ahora.getTime() - 120 * 60000);
+      await this.sesionRepo.save(
+        this.sesionRepo.create({
+          id_computadora: pcs[2].id_computadora,
+          registro_estudiante: '220011503',
+          id_motivo: motivoId,
+          id_usuario_auxiliar: idAux,
+          fecha_hora_inicio: inicioH1,
+          fecha_hora_fin: finH1,
+          minutos_permanencia: 60,
+          estado: 'CONCLUIDA',
+          asignacion_automatica: false,
+        }),
+      );
+    }
+
+    if (pcs[3]) {
+      const inicioH2 = new Date(ahora.getTime() - 240 * 60000);
+      const finH2 = new Date(ahora.getTime() - 150 * 60000);
+      await this.sesionRepo.save(
+        this.sesionRepo.create({
+          id_computadora: pcs[3].id_computadora,
+          registro_estudiante: '220011504',
+          id_motivo: motivoId,
+          id_usuario_auxiliar: idAux,
+          fecha_hora_inicio: inicioH2,
+          fecha_hora_fin: finH2,
+          minutos_permanencia: 90,
+          estado: 'CONCLUIDA',
+          asignacion_automatica: true,
+        }),
+      );
+    }
+
+    this.logger.log('Sesiones de prueba iniciales (activas e históricas) sembradas.');
   }
 }
 

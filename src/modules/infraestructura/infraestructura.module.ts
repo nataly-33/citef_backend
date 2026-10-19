@@ -4,6 +4,7 @@ import { LaboratorioSala } from './entities/laboratorio-sala.entity';
 import { Computadora } from './entities/computadora.entity';
 import { TipoPeriferico } from './entities/tipo-periferico.entity';
 import { PerifericoInventario } from './entities/periferico-inventario.entity';
+import { AsignacionSesion } from '../ocupacion/entities/asignacion-sesion.entity';
 import { SalasService } from './services/salas.service';
 import { ComputadorasService } from './services/computadoras.service';
 import { PerifericosService } from './services/perifericos.service';
@@ -19,6 +20,7 @@ import { AuditoriaModule } from '../auditoria/auditoria.module';
       Computadora,
       TipoPeriferico,
       PerifericoInventario,
+      AsignacionSesion,
     ]),
     AuditoriaModule,
   ],
