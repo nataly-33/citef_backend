@@ -6,13 +6,15 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import { LaboratorioSala } from '../../infraestructura/entities/laboratorio-sala.entity';
 import { Computadora } from '../../infraestructura/entities/computadora.entity';
 import { Estudiante } from '../entities/estudiante.entity';
 import { AsignacionSesion } from '../entities/asignacion-sesion.entity';
 import { ColaEsperaSala } from '../entities/cola-espera-sala.entity';
 import { MotivoUso } from '../../catalogos/entities/motivo-uso.entity';
+import { ReservaSala, EstadoReserva } from '../../reservas/entities/reserva-sala.entity';
+import { ReservasGateway } from '../../reservas/gateways/reservas.gateway';
 import { AsignarEquipoDto } from '../dto/asignar-equipo.dto';
 import { LiberarEquipoDto } from '../dto/liberar-equipo.dto';
 import { OcupacionGateway } from '../gateways/ocupacion.gateway';
@@ -36,9 +38,12 @@ export class OcupacionService {
     private readonly colaRepo: Repository<ColaEsperaSala>,
     @InjectRepository(MotivoUso)
     private readonly motivoRepo: Repository<MotivoUso>,
+    @InjectRepository(ReservaSala)
+    private readonly reservaRepo: Repository<ReservaSala>,
     private readonly gateway: OcupacionGateway,
     private readonly auditoriaService: AuditoriaService,
     private readonly colasEsperaService: ColasEsperaService,
+    private readonly reservasGateway: ReservasGateway,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -123,9 +128,10 @@ export class OcupacionService {
     const disponibles = puestosAlumnos.filter((p) => p.estado_actual === 'DISPONIBLE').length;
     const ocupadas = puestosAlumnos.filter((p) => p.estado_actual === 'OCUPADA').length;
     const reservadas = puestosAlumnos.filter((p) => p.estado_actual === 'RESERVADA').length;
+    const enClase = puestosAlumnos.filter((p) => p.estado_actual === 'EN_CLASE').length;
     const mantenimiento = puestosAlumnos.filter((p) => p.estado_actual === 'EN_MANTENIMIENTO').length;
 
-    const porcentajeOcupacion = totalPuestos > 0 ? Math.round((ocupadas / totalPuestos) * 100) : 0;
+    const porcentajeOcupacion = totalPuestos > 0 ? Math.round(((ocupadas + enClase) / totalPuestos) * 100) : 0;
     const saturada = porcentajeOcupacion >= 90;
 
     const colaPendiente = await this.colaRepo.count({
@@ -153,6 +159,7 @@ export class OcupacionService {
         disponibles,
         ocupadas,
         reservadas,
+        en_clase: enClase,
         mantenimiento,
         porcentaje_ocupacion: porcentajeOcupacion,
         saturada,
@@ -429,6 +436,226 @@ export class OcupacionService {
         minutos_uso: minutosUso,
         estudiante: sesionActiva.estudiante,
         cola_pendiente_conteo: colaPendiente,
+      };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * CU14 / CU16: Liberación en lote de todas las sesiones libres activas en una sala
+   * cuando el auxiliar confirma el ingreso del docente a su cátedra programada.
+   * Cambia la reserva a EN_CURSO y conmuta las computadoras a estado EN_CLASE.
+   */
+  async liberarSalaCompletaPorCatedra(
+    idSala: number,
+    idUsuarioAuxiliar: number,
+    motivo?: string,
+    ip?: string,
+  ) {
+    const sala = await this.salaRepo.findOne({ where: { id_sala: idSala } });
+    if (!sala) {
+      throw new NotFoundException(`La sala con ID ${idSala} no existe`);
+    }
+
+    const hoyStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/La_Paz' }).format(new Date());
+
+    // Buscar reserva aprobada de hoy para esta sala (o la más próxima aprobada)
+    let reservaAprobada = await this.reservaRepo.findOne({
+      where: {
+        id_sala: idSala,
+        fecha_reserva: hoyStr as any,
+        estado: EstadoReserva.APROBADA,
+      },
+      order: { hora_inicio: 'ASC' },
+      relations: { docente: true, materia: true },
+    });
+
+    if (!reservaAprobada) {
+      reservaAprobada = await this.reservaRepo.findOne({
+        where: {
+          id_sala: idSala,
+          estado: EstadoReserva.APROBADA,
+        },
+        order: { fecha_reserva: 'DESC', hora_inicio: 'ASC' },
+        relations: { docente: true, materia: true },
+      });
+    }
+
+    const computadoras = await this.computadoraRepo.find({
+      where: { id_sala: idSala, activo: true },
+    });
+
+    const idsComputadoras = computadoras.map((c) => c.id_computadora);
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    let countLiberadas = 0;
+    try {
+      if (idsComputadoras.length > 0) {
+        const sesionesActivas = await this.sesionRepo.find({
+          where: {
+            id_computadora: In(idsComputadoras),
+            estado: 'EN_CURSO',
+          },
+          relations: { computadora: true },
+        });
+
+        const ahora = new Date();
+        for (const sesion of sesionesActivas) {
+          const minutosUso = Math.max(
+            1,
+            Math.round((ahora.getTime() - new Date(sesion.fecha_hora_inicio).getTime()) / 60000),
+          );
+          const horasAdicionales = minutosUso / 60.0;
+
+          sesion.fecha_hora_fin = ahora;
+          sesion.minutos_permanencia = minutosUso;
+          sesion.estado = 'CONCLUIDA';
+          sesion.observaciones = motivo || 'Salida anticipada automática por inicio de cátedra reservada';
+          await queryRunner.manager.save(sesion);
+
+          if (sesion.computadora) {
+            sesion.computadora.horas_uso_acumuladas = Number(
+              (Number(sesion.computadora.horas_uso_acumuladas || 0) + horasAdicionales).toFixed(2),
+            );
+          }
+          countLiberadas++;
+        }
+
+        // Marcar todas las computadoras operativas como EN_CLASE (respetando EN_MANTENIMIENTO)
+        for (const comp of computadoras) {
+          if (comp.estado_actual !== 'EN_MANTENIMIENTO') {
+            comp.estado_actual = 'EN_CLASE';
+            await queryRunner.manager.save(comp);
+          }
+        }
+      }
+
+      // Conmutar estado de la reserva académica a EN_CURSO
+      if (reservaAprobada) {
+        reservaAprobada.estado = EstadoReserva.EN_CURSO;
+        await queryRunner.manager.save(reservaAprobada);
+      }
+
+      await queryRunner.commitTransaction();
+
+      // Auditoría forense
+      await this.auditoriaService.registrar({
+        id_usuario: idUsuarioAuxiliar,
+        accion: 'INICIAR_CATEDRA_SALA',
+        tabla_afectada: 'reserva_sala',
+        id_registro_afectado: reservaAprobada ? String(reservaAprobada.id_reserva) : `sala_${idSala}`,
+        valores_anteriores: { estado_reserva: EstadoReserva.APROBADA },
+        valores_nuevos: {
+          estado_reserva: EstadoReserva.EN_CURSO,
+          sesiones_liberadas: countLiberadas,
+          id_sala: idSala,
+          motivo,
+        },
+        ip_cliente: ip,
+      });
+
+      this.emitirActualizacionEstadoSala(idSala);
+      this.reservasGateway.emitirActualizacion();
+
+      return {
+        mensaje: `Se inició la cátedra docente en sala ${sala.codigo_sala}. Se liberaron ${countLiberadas} puestos y los equipos están en modo clase.`,
+        sesiones_liberadas: countLiberadas,
+        reserva: reservaAprobada,
+      };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * Finaliza la cátedra en curso en una sala:
+   * Conmuta la reserva activa a FINALIZADA y restaura los equipos a DISPONIBLE.
+   */
+  async finalizarCatedra(
+    idSala: number,
+    idUsuarioAuxiliar: number,
+    motivo?: string,
+    ip?: string,
+  ) {
+    const sala = await this.salaRepo.findOne({ where: { id_sala: idSala } });
+    if (!sala) {
+      throw new NotFoundException(`La sala con ID ${idSala} no existe`);
+    }
+
+    const reservaEnCurso = await this.reservaRepo.findOne({
+      where: {
+        id_sala: idSala,
+        estado: EstadoReserva.EN_CURSO,
+      },
+      order: { fecha_reserva: 'DESC', hora_inicio: 'DESC' },
+      relations: { docente: true, materia: true },
+    });
+
+    const computadoras = await this.computadoraRepo.find({
+      where: { id_sala: idSala, activo: true },
+    });
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    let countRestauradas = 0;
+    try {
+      // Restaurar equipos EN_CLASE a DISPONIBLE
+      for (const comp of computadoras) {
+        if (comp.estado_actual === 'EN_CLASE') {
+          comp.estado_actual = 'DISPONIBLE';
+          await queryRunner.manager.save(comp);
+          countRestauradas++;
+        }
+      }
+
+      // Marcar reserva académica como FINALIZADA
+      if (reservaEnCurso) {
+        reservaEnCurso.estado = EstadoReserva.FINALIZADA;
+        if (motivo) {
+          reservaEnCurso.obs_resolucion =
+            (reservaEnCurso.obs_resolucion ? `${reservaEnCurso.obs_resolucion} | ` : '') +
+            `Finalizada: ${motivo.trim()}`;
+        }
+        await queryRunner.manager.save(reservaEnCurso);
+      }
+
+      await queryRunner.commitTransaction();
+
+      // Auditoría forense
+      await this.auditoriaService.registrar({
+        id_usuario: idUsuarioAuxiliar,
+        accion: 'FINALIZAR_CATEDRA_SALA',
+        tabla_afectada: 'reserva_sala',
+        id_registro_afectado: reservaEnCurso ? String(reservaEnCurso.id_reserva) : `sala_${idSala}`,
+        valores_anteriores: { estado_reserva: EstadoReserva.EN_CURSO },
+        valores_nuevos: {
+          estado_reserva: EstadoReserva.FINALIZADA,
+          equipos_restaurados: countRestauradas,
+          id_sala: idSala,
+          motivo,
+        },
+        ip_cliente: ip,
+      });
+
+      this.emitirActualizacionEstadoSala(idSala);
+      this.reservasGateway.emitirActualizacion();
+
+      return {
+        mensaje: `Cátedra finalizada con éxito en sala ${sala.codigo_sala}. Se restauraron ${countRestauradas} equipos a disponible.`,
+        equipos_restaurados: countRestauradas,
+        reserva: reservaEnCurso,
       };
     } catch (err) {
       await queryRunner.rollbackTransaction();

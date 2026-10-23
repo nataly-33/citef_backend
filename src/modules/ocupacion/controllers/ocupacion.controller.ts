@@ -21,7 +21,9 @@ import { AsignarEquipoDto } from '../dto/asignar-equipo.dto';
 import { LiberarEquipoDto } from '../dto/liberar-equipo.dto';
 import { EncolarEstudianteDto } from '../dto/encolar-estudiante.dto';
 import { RegistrarEstudianteDto } from '../dto/registrar-estudiante.dto';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
+@ApiTags('Ocupación y Tiempo Real')
 @Controller('ocupacion')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class OcupacionController {
@@ -64,6 +66,36 @@ export class OcupacionController {
   ) {
     const idUsuario = req.user?.id_usuario || req.user?.id || 1;
     return this.ocupacionService.liberarEquipo(dto, idUsuario, ip);
+  }
+
+  @Post('salas/:id/liberar-por-catedra')
+  @Permisos('TIEMPOREAL_LIBERAR', 'TIEMPOREAL_ASIGNAR', 'RESERVAS_SOLICITAR', 'RESERVAS_GESTIONAR')
+  @ApiOperation({
+    summary: 'CU14: Liberación en lote de todas las sesiones libres activas de una sala por inicio de cátedra docente',
+  })
+  async liberarSalaPorCatedra(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('motivo') motivo: string,
+    @Req() req: any,
+    @Ip() ip: string,
+  ) {
+    const idUsuario = req.user?.id_usuario || req.user?.id || 1;
+    return this.ocupacionService.liberarSalaCompletaPorCatedra(id, idUsuario, motivo, ip);
+  }
+
+  @Post('salas/:id/finalizar-catedra')
+  @Permisos('TIEMPOREAL_LIBERAR', 'TIEMPOREAL_ASIGNAR', 'RESERVAS_SOLICITAR', 'RESERVAS_GESTIONAR')
+  @ApiOperation({
+    summary: 'CU14/CU16: Finalizar cátedra docente en sala, conmutar reserva a FINALIZADA y restaurar computadoras a DISPONIBLE',
+  })
+  async finalizarCatedra(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('motivo') motivo: string,
+    @Req() req: any,
+    @Ip() ip: string,
+  ) {
+    const idUsuario = req.user?.id_usuario || req.user?.id || 1;
+    return this.ocupacionService.finalizarCatedra(id, idUsuario, motivo, ip);
   }
 
   @Get('estudiantes/buscar')

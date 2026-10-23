@@ -51,6 +51,9 @@ export class AcademicosController {
     'TIEMPOREAL_ASIGNAR',
     'TIEMPOREAL_MONITOREAR',
     'TIEMPOREAL_ASISTENCIAS',
+    'RESERVAS_SOLICITAR',
+    'RESERVAS_CONSULTAR',
+    'RESERVAS_GESTIONAR',
   )
   @ApiOperation({
     summary: 'CU5: Listar carreras académicas con paginación de 15 filas y búsqueda',
@@ -158,6 +161,9 @@ export class AcademicosController {
     'TIEMPOREAL_ASIGNAR',
     'TIEMPOREAL_MONITOREAR',
     'TIEMPOREAL_ASISTENCIAS',
+    'RESERVAS_SOLICITAR',
+    'RESERVAS_CONSULTAR',
+    'RESERVAS_GESTIONAR',
   )
   @ApiOperation({
     summary: 'CU5: Listar materias con filtro por carrera, semestre y paginación',

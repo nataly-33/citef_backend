@@ -35,6 +35,9 @@ export class SalasController {
     'INFRA_INVENTARIO_GESTIONAR',
     'TIEMPOREAL_MONITOREAR',
     'TIEMPOREAL_ASIGNAR',
+    'RESERVAS_SOLICITAR',
+    'RESERVAS_CONSULTAR',
+    'RESERVAS_GESTIONAR',
   )
   findAll(
     @Query('busqueda') busqueda?: string,
@@ -57,6 +60,9 @@ export class SalasController {
     'INFRA_INVENTARIO_GESTIONAR',
     'TIEMPOREAL_MONITOREAR',
     'TIEMPOREAL_ASIGNAR',
+    'RESERVAS_SOLICITAR',
+    'RESERVAS_CONSULTAR',
+    'RESERVAS_GESTIONAR',
   )
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.salasService.findOne(id);

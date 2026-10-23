@@ -9,6 +9,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CatalogosModule } from './modules/catalogos/catalogos.module';
 import { InfraestructuraModule } from './modules/infraestructura/infraestructura.module';
 import { OcupacionModule } from './modules/ocupacion/ocupacion.module';
+import { ReservasModule } from './modules/reservas/reservas.module';
 import { SeedModule } from './modules/seed/seed.module';
 import { HttpLoggerMiddleware } from './common/middleware/http-logger.middleware';
 
@@ -39,6 +40,7 @@ import { HttpLoggerMiddleware } from './common/middleware/http-logger.middleware
     CatalogosModule,
     InfraestructuraModule,
     OcupacionModule,
+    ReservasModule,
     SeedModule,
   ],
   controllers: [AppController],

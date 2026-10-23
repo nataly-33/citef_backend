@@ -43,6 +43,12 @@ export class DocentesController {
   constructor(private readonly docentesService: DocentesService) {}
 
   @Get()
+  @Permisos(
+    'CAT_IMPORTAR_DOCENTES',
+    'RESERVAS_SOLICITAR',
+    'RESERVAS_CONSULTAR',
+    'RESERVAS_GESTIONAR',
+  )
   @ApiOperation({
     summary: 'CU7: Listar padrón docente con paginación de 15 filas y búsqueda',
   })
