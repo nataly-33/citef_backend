@@ -21,9 +21,10 @@
    - [Módulo 5: Reservas Académicas y Disponibilidad (CU16 – CU20)](#módulo-5-reservas-académicas-y-disponibilidad-cu16--cu20)
    - [Módulo 6: Turnos de Guardia e Incidencias (CU21 – CU23)](#módulo-6-turnos-de-guardia-e-incidencias-cu21--cu23)
    - [Módulo 7: Soporte Técnico y Mantenimiento RAMS (CU24 – CU25)](#módulo-7-soporte-técnico-y-mantenimiento-rams-cu24--cu25)
-   - [Módulo 8: Analítica Predictiva y Reportes de Acreditación (CU26 – CU27)](#módulo-8-analítica-predictiva-y-reportes-de-acreditación-cu26--cu27)
+   - [Módulo 8: Analítica Predictiva, Dashboard Ejecutivo y Reportes (CU26 – CU27)](#módulo-8-analítica-predictiva-dashboard-ejecutivo-y-reportes-máxima-prioridad-para-defensa-ii)
 5. [Matriz de Comandos de Inicialización, Migración, Seeders y Pruebas](#5-matriz-de-comandos-de-inicialización-migración-seeders-y-pruebas)
 6. [Instrucciones Estrictas para Agentes Autónomos de Desarrollo](#6-instrucciones-estrictas-para-agentes-autónomos-de-desarrollo)
+7. [Resumen de Actualizaciones y Control de Versiones del Documento](#7-resumen-de-actualizaciones-y-control-de-versiones-del-documento)
 
 ---
 
@@ -641,11 +642,11 @@ citef_frontend/src/app/pages/ocupacion/
 ### MÓDULO 5: RESERVAS ACADÉMICAS Y DISPONIBILIDAD
 
 #### 1. Casos de Uso Cubiertos
-* **CU16: Solicitar reserva de sala** (Docente selecciona sala, materia, fecha y horario).
-* **CU17: Consultar reservas de sala** (Calendario interactivo semanal y mensual).
-* **CU18: Validar disponibilidad de horarios** (Algoritmo estricto de no-solapamiento horario).
-* **CU19: Cancelar reserva de sala** (Docente o Administrador desiste voluntariamente antes del inicio).
-* **CU20: Gestionar reservas de sala** (Aprobación o Rechazo con dictamen formal por Jefatura).
+* **CU16: Solicitar reserva de sala** (Docente selecciona sala, materia, fecha, horario, tipo `CLASE`/`EXAMEN`, soporte multi-sala y programación semestral recurrente).
+* **CU17: Consultar reservas de sala** (Calendario interactivo semanal y vista de día dinámica particionada estilo Google Calendar).
+* **CU18: Validar disponibilidad de horarios** (Algoritmo estricto de no-solapamiento horario, aforo multi-sala y prioridad académica de evaluaciones).
+* **CU19: Cancelar reserva de sala** (Docente solicitante desiste voluntariamente antes del inicio).
+* **CU20: Gestionar reservas de sala** (Aprobación o Rechazo con dictamen formal por Jefatura y opción de **Aprobación Masiva en Lote para clases recurrentes**).
 
 #### 2. Inventario de Archivos del Módulo 5
 ```
@@ -654,22 +655,25 @@ citef_backend/src/modules/reservas/
 │   └── reserva-sala.entity.ts
 ├── dto/
 │   ├── solicitar-reserva.dto.ts
+│   ├── editar-reserva.dto.ts
 │   ├── responder-reserva.dto.ts
 │   └── consultar-reservas-filtro.dto.ts
 ├── services/
-│   ├── algoritmo-disponibilidad.service.ts # Motor matemático de detección de solapamientos horarios
-│   └── reservas.service.ts                # Ciclo de vida: PENDIENTE -> APROBADA / RECHAZADA / CANCELADA
+│   ├── algoritmo-disponibilidad.service.ts # Motor matemático de detección de solapamientos horarios y prioridad
+│   └── reservas.service.ts                # Ciclo de vida: PENDIENTE -> APROBADA / RECHAZADA / CANCELADA + Lotes
 ├── controllers/
 │   └── reservas.controller.ts
 └── reservas.module.ts
 
 citef_frontend/src/app/pages/reservas/
 ├── calendario/
-│   └── calendario-reservas.component.ts # Agenda interactiva con bloques de colores por estado
-├── solicitar-reserva/
-│   └── solicitar-reserva.component.ts   # Formulario con validación visual previa de disponibilidad
-└── bandeja-jefatura/
-    └── bandeja-jefatura.component.ts    # Bandeja para Jefatura con botones Aprobar y Rechazar (con nota)
+│   ├── calendario-reservas.component.ts # Agenda interactiva con bloques cromáticos por tipo y vista de día dinámica
+│   ├── calendario-reservas.component.html
+│   └── calendario-reservas.component.css
+└── gestion/
+    ├── bandeja-gestion-reservas.component.ts # Bandeja para Jefatura con KPIs, dictamen formal y aprobación en lote
+    ├── bandeja-gestion-reservas.component.html
+    └── bandeja-gestion-reservas.component.css
 ```
 
 #### 3. Esquema de Base de Datos y Entidades
@@ -678,28 +682,44 @@ citef_frontend/src/app/pages/reservas/
   * `id_sala`: INT REFERENCES `laboratorio_sala(id_sala)`.
   * `codigo_docente`: VARCHAR(30) REFERENCES `docente(codigo)`.
   * `id_materia`: INT REFERENCES `materia(id_materia)`.
-  * `fecha`: DATE NOT NULL.
+  * `fecha_reserva`: DATE NOT NULL.
   * `hora_inicio`: TIME NOT NULL.
   * `hora_fin`: TIME NOT NULL.
-  * `cant_estudiantes_estimada`: INT NOT NULL.
-  * `motivo`: VARCHAR(255) NOT NULL.
-  * `estado`: VARCHAR(30) NOT NULL DEFAULT 'PENDIENTE' (`PENDIENTE`, `APROBADA`, `RECHAZADA`, `CANCELADA`, `FINALIZADA`).
-  * `dictamen_jefatura`: VARCHAR(255) NULL (Motivo en caso de rechazo u observaciones).
+  * `cant_estimada_alumnos`: SMALLINT NOT NULL (Aforo asignado a la sala física individual).
+  * `cant_total_alumnos`: SMALLINT NULL (Total global de alumnos para reservas multi-sala).
+  * `id_grupo_multisala`: VARCHAR(50) NULL (`GRP_...` que vincula solicitudes multi-sala simultáneas).
+  * `salas_grupo`: JSONB NULL (Metadatos de las salas y aforos coordinados).
+  * `tema_practica`: VARCHAR(150) NOT NULL.
+  * `tipo_reserva`: VARCHAR(20) NOT NULL DEFAULT 'CLASE' (`CLASE`, `EXAMEN`).
+  * `estado`: VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE' (`PENDIENTE`, `APROBADA`, `EN_CURSO`, `RECHAZADA`, `CANCELADA`, `FINALIZADA`).
+  * `editada`: BOOLEAN NOT NULL DEFAULT false (Indicador reactivo de modificación para revisión o acuse).
+  * `notificacion_docente`: TEXT NULL (Aviso administrativo o de reprogramación prioritaria).
+  * `id_lote_recurrente`: VARCHAR(50) NULL (`SEM_...` para programación semestral recurrente).
+  * `obs_resolucion`: TEXT NULL (Dictamen formal de Jefatura).
+  * `id_usuario_administrador`: BIGINT NULL REFERENCES `usuario(id_usuario)`.
   * `creado_en`: TIMESTAMP DEFAULT NOW().
+  * `actualizado_en`: TIMESTAMP DEFAULT NOW().
 
-#### 4. Motor Algorítmico de No-Solapamiento (CU18)
+#### 4. Motor Algorítmico de No-Solapamiento, Multi-Sala y Prioridad Académica (CU18)
 Dos intervalos de reserva $A = [I_A, F_A]$ y $B = [I_B, F_B]$ para la misma sala y en la misma fecha colisionan si y solo si:
 $$\max(I_A, I_B) < \min(F_A, F_B)$$
 El backend ejecuta esta verificación en SQL nativo indexado:
 ```sql
-SELECT id_reserva FROM reserva_sala 
+SELECT id_reserva, tipo_reserva FROM reserva_sala 
 WHERE id_sala = :idSala 
-  AND fecha = :fecha 
-  AND estado = 'APROBADA'
+  AND fecha_reserva = :fecha 
+  AND estado IN ('APROBADA', 'EN_CURSO')
   AND (hora_inicio < :horaFin AND hora_fin > :horaInicio)
 LIMIT 1;
 ```
-*Se ejecuta obligatoriamente tanto al solicitar (CU16) como en el instante de la aprobación (CU20).*
+* **Regla de Prioridad de Examen:** Si se solicita un `EXAMEN` sobre una franja con `CLASE` ordinaria aprobada, el motor otorga prioridad al examen, desplazando la clase a estado `PENDIENTE` y generando una notificación formal inalterable al docente titular (`notificacion_docente`).
+* **Soporte Multi-Sala Proporcional:** Para cursos numerosos (>30 estudiantes), el docente puede seleccionar múltiples salas. El motor valida que la suma de aforos cubra el total requerido ($N \le \sum C_i$) y distribuye proporcionalmente a la capacidad física de cada laboratorio sin desbordamientos ($C_i$).
+* **Aprobación Masiva en Lote para Cátedras Semestrales (`aprobar_todas_recurrentes`):**
+  Al dictaminar la aprobación de una clase en el modal de Jefatura, se dispone de la opción *"Aprobar en lote todas las clases recurrentes de este semestre"*. El backend evalúa la disponibilidad de cada fecha del semestre vinculada por `id_lote_recurrente` y aprueba masivamente hasta 30+ clases en una sola transacción, omitiendo de forma segura aquellas fechas puntuales que tengan conflicto.
+* **Persistencia Atómica en Edición de Sala (Individual vs Multi-Sala):**
+  Al editar la sala (ej. cambio a `LAB-46`), `ReservasService.editar()` ejecuta una actualización atómica directa con `reservaRepository.update(id, { id_sala: 3, ... })` evitando sobreescrituras en el grafo relacional de TypeORM y eliminando registros huérfanos de multi-salas anteriores.
+* **Vista de Día Dinámica estilo Google Calendar:**
+  Particionamiento horizontal proporcional automático para reservas simultáneas en diferentes salas dentro de la misma franja horaria, suprimiendo cabeceras fijas redundantes.
 
 #### 5. Errores Comunes del Usuario y Validaciones Preventivas
 * **Reserva en el Pasado:** No permitir registrar solicitudes con fechas u horas anteriores al momento actual.
@@ -826,14 +846,83 @@ citef_frontend/src/app/pages/soporte/
 
 ---
 
-### MÓDULO 8: ANALÍTICA PREDICTIVA Y REPORTES DE ACREDITACIÓN
+### MÓDULO 8: ANALÍTICA PREDICTIVA, DASHBOARD EJECUTIVO Y REPORTES (MÁXIMA PRIORIDAD PARA DEFENSA II)
+
+> [!IMPORTANT]
+> **Enfoque Estratégico para Defensa II:** De acuerdo con las directrices de la mesa examinadora, el módulo de reportes y analítica constituye el componente de mayor peso evaluativo en la titulación. Se exige la presentación de un **Dashboard Gerencial interactivo** con métricas en tiempo real, variedad de gráficos estadísticos (tortas, barras, líneas, heatmaps), exportación formal en PDF institucional y Excel (.xlsx) estructurado, y el microservicio de inferencia de saturación mediante Machine Learning ($M/M/c$).
 
 #### 1. Casos de Uso Cubiertos
 * **CU26: Generar pronóstico de demanda y análisis de colas** (Inferencia de saturación mediante Machine Learning + Teoría de Colas $M/M/c$).
-* **CU27: Generar reportes dinámicos y consultas analíticas** (Reportes formales descargables en PDF y Excel para Decanatura y Acreditación).
+* **CU27: Generar reportes dinámicos y consultas analíticas** (Dashboard gerencial en tiempo real, KPIs estratégicos, gráficos interactivos, exportación oficial en PDF institucional con membrete UAGRM y libros de cálculo Excel para Decanatura y Acreditación).
 
-#### 2. Arquitectura del Microservicio Predictivo (`citef_analytics_fastapi`)
-El microservicio se ejecuta en Python / FastAPI (puerto 8001), desacoplado del backend NestJS:
+#### 2. Componentes Clave del Dashboard Ejecutivo (Frontend Angular 18)
+El panel gerencial (`dashboard-gerencial.component.ts`) presenta una consola de mando para la toma de decisiones basada en datos:
+1. **Tarjetas de KPIs Gerenciales en Tiempo Real:**
+   * *Tasa Global de Ocupación de Laboratorios (%):* Ocupación actual respecto a la capacidad instalada física total.
+   * *Total Horas Cátedra Dictadas:* Acumulado semestral de horas académicas en laboratorios para reportes de acreditación.
+   * *Índice de Evaluaciones Prioritarias:* Contador de exámenes programados con prioridad académica y clases regularizadas.
+   * *Tiempo Promedio de Permanencia:* Duración media por sesión de estudiante en minutos ($W_s$).
+   * *Salud del Parque de Cómputo:* Máquinas operativas vs computadoras en mantenimiento preventivo o correctivo (RAMS).
+   * *Efectividad de Mitigación Algorítmica:* Contador de colisiones horarias insalvables prevenidas por el motor matemático.
+2. **Batería de Gráficos Analíticos Dinámicos e Interactivos:**
+   * **Gráfico Donut / Torta:** Distribución porcentual de demanda por Carrera Curricular (Economía, Administración de Empresas, Contaduría Pública, Ingeniería Comercial, Ingeniería Financiera, etc.).
+   * **Gráficos de Barras Agrupadas:** 
+     - Comparativa de aforo y utilización por cada Laboratorio (`LAB-01` a `LAB-46`).
+     - Distribución de concurrencia y afluencia por día de la semana (Lunes a Sábado).
+   * **Gráfico de Líneas Temporal (Line Chart):** Evolución de la demanda horaria semanal y comparativa de horas programadas vs ejecutadas en el mes.
+   * **Mapa de Calor Horario (Heatmap):** Matriz de densidad de concurrencia hora a hora (de 07:00 a 22:00) para detectar picos críticos de saturación y franjas de disponibilidad ociosa.
+3. **Módulo de Exportación Multi-Formato Oficial FCEE:**
+   * **PDF Institucional Formal:** Compilado con membrete oficial de la FCEE - UAGRM, tipografía formal, firmas digitales de Decanatura y Jefatura de Laboratorios, sellos de agua de auditoría, paginación reglamentaria y hash SHA-256 de integridad.
+   * **Excel Estructurado (`.xlsx`):** Libro con hojas de cálculo estructuradas, cabeceras normalizadas y fórmulas numéricas nativas para auditorías de acreditación y presupuesto facultativo.
+4. **Catálogo de 5 Reportes Institucionales Específicos:**
+   1. *Reporte de Cátedras y Cumplimiento Docente:* Asistencias, horas dictadas por materia, grupo y docente titular.
+   2. *Reporte de Ocupación y Eficiencia de Aulas:* Tasa de utilización, horarios pico y horas ociosas por laboratorio.
+   3. *Reporte de Salud de Infraestructura y Mantenimiento RAMS:* Ficha técnica de computadoras, horas de uso acumuladas, averías, MTBF, MTTR y disponibilidad ($A$).
+   4. *Reporte de Prioridad Académica y Evaluaciones:* Registro de exámenes parciales/finales y clases regularizadas.
+   5. *Reporte Forense de Auditoría Transaccional:* Trazabilidad completa de operaciones registradas por el Administrador y operadores.
+
+#### 3. Inventario de Archivos del Módulo 8
+```
+citef_backend/src/modules/analitica/
+├── entities/
+│   ├── ejecucion-ml.entity.ts
+│   ├── pronostico-saturacion.entity.ts
+│   ├── documento-reporte-exportado.entity.ts # Registro y descarga de archivos PDF/Excel
+│   └── bitacora-consulta-asistente.entity.ts
+├── dto/
+│   ├── generar-reporte-filtro.dto.ts
+│   ├── parametrizar-dashboard.dto.ts
+│   └── consultar-asistente-nlp.dto.ts
+├── services/
+│   ├── metricas-dashboard.service.ts   # Cálculo de KPIs, agregaciones por carrera, sala y heatmap
+│   ├── exportacion-reportes.service.ts # Generación server-side de PDF con membrete y libros Excel (.xlsx)
+│   ├── analitica-predictiva.service.ts # Orquestación con microservicio FastAPI
+│   └── asistente-sql.service.ts        # Procesador Text-to-SQL seguro sobre réplica de lectura
+├── controllers/
+│   ├── metricas.controller.ts
+│   ├── reportes.controller.ts
+│   └── asistente-sql.controller.ts
+├── clients/
+│   └── analytics-fastapi.client.ts     # Cliente Axios HTTP hacia FastAPI (puerto 8001)
+└── analitica.module.ts
+
+citef_frontend/src/app/pages/analitica/
+├── dashboard-gerencial/
+│   ├── dashboard-gerencial.component.ts # Dashboard ejecutivo con KPIs y gráficas dinámicas
+│   ├── dashboard-gerencial.component.html
+│   └── dashboard-gerencial.component.css
+├── reportes-oficiales/
+│   ├── reportes-oficiales.component.ts  # Generador y catálogo de reportes PDF y Excel
+│   ├── reportes-oficiales.component.html
+│   └── reportes-oficiales.component.css
+└── pronostico-saturacion/
+    ├── pronostico-saturacion.component.ts # Visualización de curvas de ML y teoría de colas M/M/c
+    ├── pronostico-saturacion.component.html
+    └── pronostico-saturacion.component.css
+```
+
+#### 4. Arquitectura del Microservicio Predictivo (`citef_analytics_fastapi`)
+El microservicio se ejecuta en Python 3 / FastAPI (puerto 8001), totalmente desacoplado del backend NestJS:
 ```
 citef_analytics_fastapi/
 ├── main.py
@@ -847,10 +936,10 @@ citef_analytics_fastapi/
     └── prediccion.py                    # Endpoint POST /api/v1/ml/predecir-demanda
 ```
 
-#### 3. Consumo desde NestJS y Presentación en Frontend
-* El backend NestJS actúa como pasarela segura mediante Axios en `citef_backend/src/modules/analitica/clients/analytics-fastapi.client.ts`.
-* La pantalla en Angular (`pronostico-demanda.component.ts`) presenta gráficas limpias con curvas de demanda proyectada y porcentaje de riesgo de saturación.
-* El generador de reportes (`reportes-acreditacion.component.ts`) emite documentos oficiales en formato PDF (con el membrete de la FCEE y firmas reglamentarias) y libros de Excel.
+#### 5. Consumo Seguro desde NestJS y Presentación en Frontend
+* El backend NestJS actúa como pasarela segura mediante Axios en `analytics-fastapi.client.ts`.
+* El panel en Angular renderiza los gráficos mediante componentes modulares basados en SVG/Canvas o librerías estándar libres de dependencias obsoletas, respetando los colores institucionales FCEE (`#A81124`, `#002855`).
+* La exportación genera archivos inalterables firmados criptográficamente para su presentación directa ante los tribunales de grado de la UAGRM.
 
 ---
 
@@ -923,3 +1012,14 @@ Cuando un agente deba implementar o corregir cualquier módulo del sistema:
 7. **Regla 7 (Validaciones en Letras Rojas en Modales):** En cualquier modal de creación o edición de todos los módulos del sistema (Módulos 1 al 8), los errores de validación de campos vacíos o datos que no cumplan restricciones deben presentarse en letras rojas descriptivas debajo del campo afectado (`.field-error-text`) y con borde en rojo (`.input-error`). Prohibido deshabilitar botones de forma muda sin feedback. Si el backend rechaza la operación, el mensaje de error debe mostrarse dentro del modal en un banner rojo (`.modal-alert-danger`) sin cerrarlo.
 8. **Regla 8 (Paginación Máxima de 10 Registros):** Todas las tablas del sistema deben paginar a un máximo de 10 filas por vista, con controles interactivos funcionales para navegar adelante y atrás.
 9. **Regla 9 (Control de Acceso Granular RBAC y Sidebar Dinámico):** Los controladores del backend deben protegerse mediante `@Permisos(...)` respetando la matriz RBAC. Si un rol no administrador recibe un permiso (ej. Auxiliar con permiso de ver bitácora o crear usuarios), tanto el backend como el sidebar del frontend deben autorizar y mostrar inmediatamente dichas secciones.
+
+---
+
+## 7. Resumen de Actualizaciones y Control de Versiones del Documento
+
+| Versión | Fecha | Módulos Actualizados | Detalle de Mejoras Técnicas y Ajustes Metodológicos |
+| :--- | :--- | :--- | :--- |
+| **v2.2** | 2026-10-23 | Módulo 5 (Reservas), Módulo 8 (Reportes y BI), Reglas de Defensa II | **1. Módulo de Reportes como Máxima Prioridad de Titulación (Defensa II):** Especificación completa del Dashboard Ejecutivo interactivo en tiempo real con 6 KPIs estratégicos, 4 variedades de gráficos (Donut/Torta por carrera, Barras por sala y días, Líneas temporales de demanda, Heatmap horario 07:00 a 22:00), exportador oficial a PDF con membrete UAGRM FCEE y libros Excel (.xlsx) estructurados.<br>**2. Aprobación en Lote de Cátedras Semestrales (Módulo 5):** Incorporación del dictamen masivo mediante `aprobar_todas_recurrentes` en `ResponderReservaDto` y `ReservasService.gestionar()`, permitiendo aprobar hasta 30+ clases semestrales con un solo clic.<br>**3. Persistencia Atómica en Edición de Sala:** Reasignación certera a laboratorios individuales como LAB-46 mediante `reservaRepository.update` y depuración automática de registros secundarios de grupo.<br>**4. Vista Diaria Particionada (Google Calendar):** Particionamiento horizontal proporcional en la vista de día sin cabeceras fijas redundantes.<br>**5. Prioridad Académica y Aforo Multi-Sala:** Reglas de desplazamiento de clases por exámenes y reparto proporcional de estudiantes sin sobrecupo. |
+| **v2.1** | 2026-10-20 | Módulos 1 al 5 | Inclusión de endpoints de catálogos transversales, solución a errores 403 para docentes y auxiliares, paleta institucional FCEE UAGRM y cero emojis en Angular 18. |
+| **v2.0** | 2026-10-16 | Documento Completo | Normalización RUP / UML 2.5 de casos de uso CU1 a CU27, matriz de permisos RBAC y catálogo de componentes compartidos. |
+| **v1.0** | 2026-10-10 | Documento Completo | Plan maestro inicial de desarrollo para el Sistema CITEF FCEE UAGRM. |

@@ -44,6 +44,111 @@ graph TD
 
 ---
 
+## 2.1. Principio de Centralidad del Administrador y Trazabilidad Transaccional Total (Requisito Crítico de Defensa II)
+
+De acuerdo con las observaciones metodológicas de evaluación docente (véase patrón arquitectónico de referencia en `image copy 4.png`), **el Administrador / Usuario institucional se sitúa en el centro neurálgico del modelo relacional**:
+1. **Omnipresencia de Autoridad y Gestión:** En el CITEF no existe ninguna entidad operativa o registro maestro que escape al alcance del `ADMINISTRADOR`. El administrador crea, configura, autoriza, audita y supervisa todas las dimensiones del ecosistema.
+2. **Trazabilidad Forense por Llaves Foráneas de Auditoría:** Para que todo evento en el sistema evidencie autoría explícita (`created_by`, `modified_by`, `approved_by`), las tablas de infraestructura, catálogos, sesiones, reservas, soporte y reportes contienen llaves foráneas directas hacia `usuario(id_usuario)`.
+
+```mermaid
+classDiagram
+    direction TB
+    class Usuario {
+        <<PK>> id_usuario: BIGINT
+        correo_institucional: VARCHAR(120)
+        password_hash: VARCHAR(255)
+        nombres: VARCHAR(80)
+        apellidos: VARCHAR(80)
+        activo: BOOLEAN
+        creado_en: TIMESTAMP
+        actualizado_en: TIMESTAMP
+    }
+    
+    class BitacoraAuditoria {
+        <<PK>> id_auditoria: BIGINT
+        <<FK>> id_usuario: BIGINT
+        accion: VARCHAR(50)
+        tabla_afectada: VARCHAR(60)
+        valores_anteriores: JSONB
+        valores_nuevos: JSONB
+    }
+    
+    class LaboratorioSala {
+        <<PK>> id_sala: INT
+        <<FK>> id_usuario_administrador: BIGINT
+        codigo_sala: VARCHAR(20)
+        cant_estudiantes: SMALLINT
+    }
+    
+    class Computadora {
+        <<PK>> id_computadora: BIGINT
+        <<FK>> id_usuario_administrador: BIGINT
+        codigo_equipo: VARCHAR(30)
+        estado_actual: VARCHAR(25)
+    }
+    
+    class ReservaSala {
+        <<PK>> id_reserva: INT
+        <<FK>> id_usuario_administrador: BIGINT
+        <<FK>> codigo_docente: VARCHAR(30)
+        tipo_reserva: VARCHAR(20)
+        estado: VARCHAR(20)
+    }
+    
+    class AsignacionSesion {
+        <<PK>> id_sesion: BIGINT
+        <<FK>> id_usuario_auxiliar: BIGINT
+        <<FK>> registro_estudiante: VARCHAR(20)
+        hora_inicio: TIMESTAMP
+    }
+    
+    class AsignarTurno {
+        <<PK>> id_asignacion_turno: INT
+        <<FK>> id_usuario_administrador: BIGINT
+        <<FK>> id_usuario_auxiliar: BIGINT
+    }
+    
+    class OrdenAveria {
+        <<PK>> id_averia: INT
+        <<FK>> id_usuario_reportante: BIGINT
+        descrip_falla: TEXT
+    }
+    
+    class MantenimientoTaller {
+        <<PK>> id_mantenimiento: INT
+        <<FK>> id_usuario_tecnico: BIGINT
+        <<FK>> id_usuario_autorizador: BIGINT
+    }
+    
+    class DocumentoReporteExportado {
+        <<PK>> id_reporte: BIGINT
+        <<FK>> id_usuario: BIGINT
+        tipo_reporte: VARCHAR(60)
+        formato: VARCHAR(10)
+        fecha_generacion: TIMESTAMP
+    }
+    
+    class EjecucionModeloML {
+        <<PK>> id_ejecucion_ml: BIGINT
+        <<FK>> id_usuario: BIGINT
+        algoritmo: VARCHAR(80)
+        fecha_ejecucion: TIMESTAMP
+    }
+
+    Usuario "1" --> "0..*" BitacoraAuditoria : registra_auditoria
+    Usuario "1" --> "0..*" LaboratorioSala : configura_sala
+    Usuario "1" --> "0..*" Computadora : inventaria_equipo
+    Usuario "1" --> "0..*" ReservaSala : autoriza_dictamina
+    Usuario "1" --> "0..*" AsignacionSesion : asigna_sesion
+    Usuario "1" --> "0..*" AsignarTurno : programa_guardia
+    Usuario "1" --> "0..*" OrdenAveria : reporta_incidencia
+    Usuario "1" --> "0..*" MantenimientoTaller : repara_autoriza
+    Usuario "1" --> "0..*" DocumentoReporteExportado : genera_exporta
+    Usuario "1" --> "0..*" EjecucionModeloML : entrena_ejecuta
+```
+
+---
+
 ## 3. Especificación Detallada por Módulos
 
 ### MÓDULO 1: Seguridad, Usuarios y Auditoría
@@ -244,6 +349,7 @@ Modela las salas de laboratorio (con atributos booleanos directos `maquina_docen
 | Atributo | Tipo de Dato (PostgreSQL) | Nulidad | Llave | Descripción |
 | :--- | :--- | :--- | :--- | :--- |
 | `id_sala` | `SERIAL` | NOT NULL | **PK** | Identificador de la sala de cómputo. |
+| `id_usuario_administrador` | `BIGINT` | NULL | **FK** | Referencia a `usuario(id_usuario)` (Administrador que configuró la sala). |
 | `codigo_sala` | `VARCHAR(20)` | NOT NULL | **UK** | Código visible institucional (ej. `LAB-01`, `LAB-02`). |
 | `nombre` | `VARCHAR(80)` | NOT NULL | - | Nombre descriptivo (ej. "Laboratorio de Finanzas"). |
 | `piso` | `SMALLINT` | NOT NULL | - | Nivel de piso dentro del edificio. |
@@ -264,6 +370,7 @@ Modela las salas de laboratorio (con atributos booleanos directos `maquina_docen
 | Atributo | Tipo de Dato (PostgreSQL) | Nulidad | Llave | Descripción |
 | :--- | :--- | :--- | :--- | :--- |
 | `id_computadora` | `BIGSERIAL` | NOT NULL | **PK** | Identificador primario del equipo. |
+| `id_usuario_administrador` | `BIGINT` | NULL | **FK** | Referencia a `usuario(id_usuario)` (Administrador que inventarió la terminal). |
 | `id_sala` | `INTEGER` | NOT NULL | **FK** | Referencia a `laboratorio_sala(id_sala)`. |
 | `codigo_equipo` | `VARCHAR(30)` | NOT NULL | **UK** | Identificador de placa/etiqueta (ej. `L1-PC01`, `L1-DOCENTE`). |
 | `maquina_docente` | `BOOLEAN` | NOT NULL | - | Distingue estación docente de terminales de alumnos. Default `FALSE`. |
@@ -295,6 +402,7 @@ Modela las salas de laboratorio (con atributos booleanos directos `maquina_docen
 | Atributo | Tipo de Dato (PostgreSQL) | Nulidad | Llave | Descripción |
 | :--- | :--- | :--- | :--- | :--- |
 | `id_periferico` | `BIGSERIAL` | NOT NULL | **PK** | Identificador primario del componente. |
+| `id_usuario_administrador` | `BIGINT` | NULL | **FK** | Referencia a `usuario(id_usuario)` (Administrador o personal que registró el periférico). |
 | `id_computadora` | `BIGINT` | NOT NULL | **FK** | Referencia a `computadora(id_computadora)`. |
 | `id_tipo_periferico` | `INTEGER` | NOT NULL | **FK** | Referencia a `tipo_periferico(id_tipo_periferico)`. |
 | `marca_modelo` | `VARCHAR(80)` | NOT NULL | - | Marca y modelo comercial (ej. `Logitech K120`). |
@@ -396,10 +504,18 @@ Gestiona las solicitudes docentes de salas completas para prácticas curriculare
 | `hora_inicio` | `TIME` | NOT NULL | - | Hora de inicio programada. |
 | `hora_fin` | `TIME` | NOT NULL | - | Hora de culminación programada. |
 | `tema_practica` | `VARCHAR(150)` | NOT NULL | - | Tema curricular o justificación de la clase práctica. |
-| `cant_estimada_alumnos`| `SMALLINT` | NOT NULL | - | Proyección de asistencia del curso. |
-| `estado` | `VARCHAR(20)` | NOT NULL | - | `PENDIENTE`, `APROBADA`, `RECHAZADA`, `CANCELADA`, `CONCLUIDA`. |
+| `cant_estimada_alumnos`| `SMALLINT` | NOT NULL | - | Proyección de asistencia asignada a la sala física individual. |
+| `cant_total_alumnos` | `SMALLINT` | NULL | - | Asistencia total del curso en solicitudes multi-sala combinadas. |
+| `id_grupo_multisala` | `VARCHAR(50)` | NULL | - | Identificador de vinculación coordinada para reservas multi-sala (`GRP_...`). |
+| `salas_grupo` | `JSONB` | NULL | - | Desglose y aforos de los laboratorios coordinados en la solicitud. |
+| `tipo_reserva` | `VARCHAR(20)` | NOT NULL | - | `CLASE` (cátedra curricular) o `EXAMEN` (evaluación con prioridad de asignación). |
+| `estado` | `VARCHAR(20)` | NOT NULL | - | `PENDIENTE`, `APROBADA`, `EN_CURSO`, `RECHAZADA`, `CANCELADA`, `FINALIZADA`. |
+| `editada` | `BOOLEAN` | NOT NULL | - | `true` si la reserva fue modificada y requiere dictamen o acuse de recibo. |
+| `notificacion_docente` | `TEXT` | NULL | - | Aviso formal al docente por ajuste administrativo o desplazamiento por examen. |
+| `id_lote_recurrente` | `VARCHAR(50)` | NULL | - | Identificador de lote para programación semestral recurrente (`SEM_...`). |
 | `obs_resolucion` | `TEXT` | NULL | - | Motivo de rechazo o instrucciones técnicas de jefatura. |
-| `fecha_solicitud` | `TIMESTAMP WITH TIME ZONE` | NOT NULL | - | Marca temporal de la petición. Default `NOW()`. |
+| `creado_en` | `TIMESTAMP WITH TIME ZONE` | NOT NULL | - | Marca temporal de la petición. Default `NOW()`. |
+| `actualizado_en` | `TIMESTAMP WITH TIME ZONE` | NOT NULL | - | Marca temporal de última modificación. Default `NOW()`. |
 
 ---
 
@@ -429,6 +545,7 @@ Gestiona la asignación semestral de turnos (fija por 6 meses), el checklist de 
 | Atributo | Tipo de Dato (PostgreSQL) | Nulidad | Llave | Descripción |
 | :--- | :--- | :--- | :--- | :--- |
 | `id_asignar_turno` | `BIGSERIAL` | NOT NULL | **PK** | Identificador de la asignación de turno. |
+| `id_usuario_administrador`| `BIGINT` | NULL | **FK** | Referencia a `usuario(id_usuario)` (Jefatura/Administrador que programó la guardia). |
 | `id_usuario_auxiliar`| `BIGINT` | NOT NULL | **FK** | Referencia a `usuario(id_usuario)`. |
 | `id_horario_catalogo`| `INTEGER` | NOT NULL | **FK** | Referencia a `horario_turno_catalogo(id_horario_catalogo)`. |
 | `id_sala` | `INTEGER` | NOT NULL | **FK** | Referencia a `laboratorio_sala(id_sala)`. |
@@ -624,6 +741,27 @@ Soporta las proyecciones de demanda del modelo `RandomForestRegressor`, la integ
 
 ---
 
+#### 8.4. Tabla / Clase: `documento_reporte_exportado` (`DocumentoReporteExportado`)
+* **Propósito:** Registro y archivo digital de todos los informes ejecutivos y acreditativos generados por la Jefatura (`CU27`), descargables en formatos PDF institucional (con membrete oficial y sellos de agua) y libros de cálculo Excel (`.xlsx`). Vinculado directamente al `id_usuario` que solicitó la emisión (Requisito de Defensa II).
+* **Diccionario de Atributos:**
+
+| Atributo | Tipo de Dato (PostgreSQL) | Nulidad | Llave | Descripción |
+| :--- | :--- | :--- | :--- | :--- |
+| `id_reporte` | `BIGSERIAL` | NOT NULL | **PK** | Identificador unívoco del reporte emitido. |
+| `id_usuario` | `BIGINT` | NOT NULL | **FK** | Referencia a `usuario(id_usuario)` (Administrador o Jefatura que generó el reporte). |
+| `tipo_reporte` | `VARCHAR(60)` | NOT NULL | - | Categoría (`OCUPACION_AULAS`, `ASISTENCIA_DOCENTE`, `INVENTARIO_RAMS`, `AUDITORIA_FORENSE`, `PROYECCION_SATURACION`). |
+| `titulo_documento` | `VARCHAR(150)` | NOT NULL | - | Título formal del informe institucional. |
+| `formato` | `VARCHAR(10)` | NOT NULL | - | Formato del archivo (`PDF`, `XLSX`). |
+| `rango_fecha_inicio` | `DATE` | NOT NULL | - | Límite temporal inicial del periodo analizado. |
+| `rango_fecha_fin` | `DATE` | NOT NULL | - | Límite temporal final del periodo analizado. |
+| `parametros_filtro` | `JSONB` | NULL | - | Parámetros y filtros aplicados (sala, carrera, materia, docente). |
+| `ruta_archivo_almacenado`| `VARCHAR(255)`| NOT NULL | - | Ruta en storage o identificador de descarga segura. |
+| `tamano_bytes` | `BIGINT` | NOT NULL | - | Tamaño físico del archivo generado. |
+| `hash_integridad_sha256` | `VARCHAR(64)` | NOT NULL | - | Firma criptográfica para verificación de no adulteración ante Decanatura. |
+| `generado_en` | `TIMESTAMP WITH TIME ZONE`| NOT NULL | - | Marca de tiempo exacta de expedición. Default `NOW()`. |
+
+---
+
 ## 4. Matriz de Relaciones Lógicas, Cardinalidades y Reglas de Integridad
 
 Esta matriz formaliza el modelo lógico para que Jael trace los conectores en Enterprise Architect, distinguiendo claramente entre **Asociación Simple (`—`)**, **Agregación Compartida (`◇`)** y **Composición Fuerte (`◆`)**:
@@ -759,10 +897,14 @@ erDiagram
     mantenimiento_taller ||--|| confirmacion_retorno_sala : "retorna_a_sala"
     computadora ||--o{ indicador_confiabilidad_rams : "evalua_confiabilidad"
 
-    %% MODULO 8: ANALITICA PREDICTIVA Y ASISTENTE
+    %% MODULO 8: ANALITICA PREDICTIVA Y REPORTES DE ACREDITACION
     ejecucion_modelo_ml ||--|{ pronostico_saturacion : "produce"
     laboratorio_sala ||--o{ pronostico_saturacion : "recibe_pronostico"
     usuario ||--o{ bitacora_consulta_asistente : "formula_pregunta"
+    usuario ||--o{ documento_reporte_exportado : "exporta_reporte"
+    usuario ||--o{ ejecucion_modelo_ml : "ejecuta_entrenamiento"
+    usuario ||--o{ laboratorio_sala : "crea_configura_sala"
+    usuario ||--o{ computadora : "da_de_alta_equipo"
 ```
 
 ---
@@ -781,3 +923,22 @@ erDiagram
    * La entidad `ActaRelevo` vincula formalmente las jornadas saliente y entrante con confirmación digital explícita (`aceptado_por_entrante`), `cant_averias_pend`, `cant_objetos_custodia` y `obs_discrepancia`.
 5. **Soporte para Investigación Operativa y Métricas RAMS:**
    * Soporta nativamente el cálculo estocástico de Teoría de Colas ($\lambda, \mu, c, \rho, W_q$), el balanceo de desgaste mediante `horas_uso_acumuladas`, y las métricas de mantenimiento **MTBF**, **MTTR** y **Disponibilidad ($A$)**.
+
+---
+
+## 7. Soporte para el Motor de Reservas Académicas Avanzado (Módulo 5)
+
+En consonancia con las actualizaciones de implementación:
+1. **Entidad `reserva_sala`:** Incorpora `cant_total_alumnos` (aforo global), `id_grupo_multisala` y `salas_grupo` (metadatos JSONB) para reservas coordinadas entre múltiples salas físicas sin saturar su aforo individual ($N \le \sum C_i$).
+2. **Prioridad Académica:** Atributo `tipo_reserva` (`CLASE` vs `EXAMEN`), permitiendo que las evaluaciones prioritarias desplacen a cátedras ordinarias con notificación auditada al docente titular (`notificacion_docente`) y bandera reactiva `.dot-editada`.
+3. **Aprobación en Lote de Lotes Semestrales (`id_lote_recurrente`):** El administrador aprueba con un solo clic hasta 30+ clases recurrentes asociadas al mismo semestre lectivo mediante `aprobar_todas_recurrentes`.
+
+---
+
+## 8. Resumen de Actualizaciones y Control de Versiones del Documento
+
+| Versión | Fecha | Secciones Afectadas | Descripción de Cambios y Mejoras Metodológicas |
+| :--- | :--- | :--- | :--- |
+| **v2.1** | 2026-10-23 | Sección 2.1, Módulos 1, 5, 8, Diagramas ERD | **1. Centralidad del Administrador / Usuario (Requisito de Defensa II):** Incorporación del principio arquitectónico de omnipresencia del `ADMINISTRADOR` (conforme a `image copy 4.png`), documentando llaves foráneas y auditoría hacia `Usuario` en todas las entidades maestras y transaccionales.<br>**2. Diagrama de Centralidad de Usuario:** Diagrama Mermaid de clases mostrando a `Usuario` en el núcleo relacionándose con bitácora, salas, computadoras, reservas, sesiones, turnos, averías, taller y reportes.<br>**3. Entidad `DocumentoReporteExportado`:** Especificación completa de la tabla para archivo y descarga de informes PDF/Excel firmados.<br>**4. Modelo de Reservas Actualizado:** Inclusión de campos `cant_total_alumnos`, `id_grupo_multisala`, `salas_grupo`, `id_lote_recurrente`, `tipo_reserva`, `editada`, `notificacion_docente`. |
+| **v2.0** | 2026-10-17 | Módulos 1 al 8, Matriz UML | Ajuste de nombres de clases directos, atributos normalizados (`cant`, `descrip`, `obs`), padrón con clave `codigo` para docentes y matrícula `registro` para estudiantes. |
+| **v1.0** | 2026-10-10 | Documento Completo | Especificación inicial del diseño lógico relacional en PostgreSQL para los 8 módulos del CITEF FCEE UAGRM. |

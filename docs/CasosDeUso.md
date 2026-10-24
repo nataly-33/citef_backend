@@ -468,82 +468,87 @@ flowchart TD
 
 ##### CU16. Solicitar reserva de sala
 * **Caso de Uso:** CU16. Solicitar reserva de sala
-* **Propósito:** Registrar una solicitud formal de reserva de laboratorio por parte de un docente para clases prácticas o exámenes.
-* **Descripción:** El Docente selecciona fecha, horario, laboratorio, materia, grupo y cantidad esperada de alumnos. El sistema incluye obligatoriamente la validación algorítmica de solapamiento de horarios y almacena la solicitud en estado "Pendiente".
-* **Actores:** Docente
-* **Actor Iniciador:** Docente
+* **Propósito:** Registrar una solicitud formal de reserva de laboratorio por parte de un docente para clases prácticas o evaluaciones/exámenes, con soporte para aforo multi-sala y recurrencia semestral.
+* **Descripción:** El Docente titular selecciona fecha, franja horaria ($H_{inicio}$, $H_{fin}$), uno o varios laboratorios combinados (para cátedras con aforo superior a 30 alumnos), materia curricular, tema de la práctica, cantidad estimada de estudiantes y tipo de actividad (`CLASE` o `EXAMEN`). Si la cátedra se imparte a lo largo del periodo lectivo, puede activar la **programación semestral recurrente** indicando la fecha de finalización y los días de la semana correspondientes. El sistema incluye obligatoriamente la validación algorítmica de solapamiento de horarios y capacidad combinada, almacenando la solicitud en estado "Pendiente".
+* **Actores:** Docente, Administrador / Jefatura CITEF
+* **Actor Iniciador:** Docente (para sus materias asignadas) / Administrador (en representación de cualquier docente)
 * **Precondición:** Docente activo y autenticado en la plataforma.
 * **Relaciones UML:** `<<include>>` hacia **CU18. Validar disponibilidad de horarios**.
 * **Proceso Principal:**
-  1. El Docente accede al módulo de reservas y selecciona "Nueva Solicitud".
-  2. Especifica la sala requerida, fecha, horario de inicio y fin, materia, grupo y cantidad de alumnos.
-  3. El sistema ejecuta `<<include>>` **CU18. Validar disponibilidad de horarios** para verificar que no existan colisiones con reservas aprobadas.
-  4. El sistema registra la solicitud en estado "Pendiente" y la envía a la bandeja de evaluación de la Jefatura.
-* **Postcondición:** Solicitud de reserva registrada en estado pendiente. La operación queda registrada en la bitácora de auditoría.
-* **Excepciones:** Detección de colisión horaria (bloqueo de solicitud); capacidad de la sala inferior al número de estudiantes.
+  1. El Docente accede al módulo de reservas y selecciona "Nueva Solicitud" (o hace clic sobre una celda del calendario interactivo).
+  2. Especifica la sala requerida (o combina múltiples salas si la cantidad de alumnos excede la capacidad individual), fecha programada, horario de inicio y fin, materia académica, tema curricular y cantidad de alumnos.
+  3. Si la solicitud corresponde a una cátedra continua, activa la opción semestral recurrente seleccionando días de dictado y fecha de cierre.
+  4. El sistema ejecuta `<<include>>` **CU18. Validar disponibilidad de horarios** para verificar en tiempo real que no existan colisiones con reservas aprobadas y que la capacidad combinada cubra el aforo requerido.
+  5. El sistema registra la solicitud (o el lote recurrente `SEM_...`) en estado "Pendiente", vinculando a las salas mediante `id_grupo_multisala` y emitiendo una notificación en tiempo real a Jefatura.
+* **Postcondición:** Solicitud(es) de reserva registrada(s) en estado pendiente con trazabilidad en bitácora de auditoría.
+* **Excepciones:** Detección de colisión horaria insalvable; aforo combinado insuficiente para la cantidad de alumnos.
 
 ##### CU17. Consultar reservas de sala
 * **Caso de Uso:** CU17. Consultar reservas de sala
-* **Propósito:** Visualizar el calendario y estado de las reservas programadas y solicitadas en los laboratorios del CITEF.
-* **Descripción:** Los Docentes, Auxiliares y la Jefatura consultan la grilla semanal y mensual de reservas por sala, verificando qué franjas están ocupadas y cuáles disponibles. Para los docentes o jefatura, provee el punto de extensión para cancelar reservas vigentes.
+* **Propósito:** Visualizar de forma reactiva y cromática el calendario y la disponibilidad de los laboratorios del CITEF en vistas semanales y diarias.
+* **Descripción:** Los Docentes, Auxiliares y la Jefatura consultan la grilla de reservas por sala en intervalos de 07:00 a 22:00. Las reservas se identifican mediante código cromático institucional: Azul Carmesí (Cátedras Aprobadas), Verde Éxito (Exámenes Aprobados), Amarillo Ámbar (Pendientes de dictamen) y Rojo (Rechazadas). En la vista diaria, las solicitudes concurrentes se particionan dinámicamente en columnas proporcionales estilo Google Calendar sin cabeceras estáticas redundantes. Incorpora badges de alerta `.dot-editada` ante solicitudes modificadas con botón de acuse de recibo.
 * **Actores:** Docente, Auxiliar de Laboratorio, Administrador / Jefatura CITEF
 * **Actor Iniciador:** Docente / Auxiliar / Administrador
 * **Precondición:** Reservas registradas en la base de datos.
 * **Punto de Extensión:** *Desistimiento voluntario de horario por el docente:* extendido por **CU19. Cancelar reserva de sala**.
 * **Proceso Principal:**
   1. El usuario accede al calendario interactivo de reservas.
-  2. Selecciona la sala y la semana académica a consultar.
-  3. El sistema despliega los bloques ocupados indicando materia, docente y horario.
-* **Postcondición:** Calendario de reservas visualizado en pantalla.
-* **Excepciones:** Sin reservas programadas para la semana seleccionada.
+  2. Alterna entre vista semanal y vista diaria, o filtra por laboratorio específico.
+  3. El sistema despliega las franjas horarias ocupadas con información de la materia, docente titular, código de sala y horario.
+  4. Al pulsar sobre cualquier bloque, abre el modal de detalle con la información completa de la reserva y las acciones autorizadas según el rol.
+* **Postcondición:** Calendario de reservas visualizado en pantalla con sincronización WebSocket ante eventos en vivo.
+* **Excepciones:** Sin reservas programadas para la semana o día seleccionado.
 
 ##### CU18. Validar disponibilidad de horarios
 * **Caso de Uso:** CU18. Validar disponibilidad de horarios
-* **Propósito:** Verificar algorítmicamente que no existan colisiones ni solapamientos temporales para una sala y franja horaria determinadas.
-* **Descripción:** Caso de uso incluido que ejecuta el control de intersección sobre los intervalos de tiempo `[inicio, fin]` de las reservas aprobadas en la sala solicitada, impidiendo estrictamente solapamientos.
+* **Propósito:** Verificar algorítmicamente que no existan colisiones ni solapamientos temporales en las salas y aplicar el principio de prioridad académica de evaluaciones.
+* **Descripción:** Caso de uso incluido que ejecuta el control estricto de intersección matemática sobre intervalos de tiempo continuos $[I_A, F_A) \cap [I_B, F_B) \neq \emptyset$ para la misma sala y fecha. Si se solicita un `EXAMEN` en un turno con `CLASE` ordinaria aprobada, el motor otorga prioridad al examen, marcando la clase como desplazable y notificando formalmente al docente. Adicionalmente, verifica duración mínima de 45 minutos, no-retroactividad en fechas pasadas y reparto proporcional de aforo sin desbordamiento para grupos multi-sala.
 * **Actores:** Docente, Administrador / Jefatura CITEF
 * **Actor Iniciador:** Invocado por inclusión desde CU16 (Solicitar reserva) o CU20 (Gestionar reservas).
-* **Precondición:** Sala, fecha y horario especificados.
+* **Precondición:** Sala(s), fecha, horario y cantidad de alumnos especificados.
 * **Proceso Principal:**
-  1. El backend recibe la sala, fecha y rango horario propuesto.
-  2. Consulta si existe alguna reserva aprobada que intersecte el intervalo temporal.
-  3. Si no existe conflicto, retorna validación exitosa.
-  4. Si existe conflicto, retorna alerta de colisión con los horarios ocupados.
+  1. El backend recibe la lista de salas, fecha y rango horario propuesto.
+  2. Valida coherencia temporal ($H_{fin} - H_{inicio} \ge 45\text{ min}$) y que la fecha no pertenezca al pasado.
+  3. Si la solicitud es multi-sala, valida que la capacidad total combinada cubra a los estudiantes y calcula la asignación proporcional por aula.
+  4. Ejecuta la consulta indexada de colisión en PostgreSQL excluyendo las reservas del propio grupo.
+  5. Si detecta una clase ordinaria y la solicitud entrante es un `EXAMEN`, habilita la disponibilidad prioritaria y programa el desplazamiento automático de la clase.
+  6. Retorna el dictamen de disponibilidad al módulo invocador.
 * **Postcondición:** Resultado de la validación temporal retornado a la operación invocadora.
-* **Excepciones:** Conflicto de horario detectado.
+* **Excepciones:** Conflicto horario insalvable con otra reserva aprobada no desplazable.
 
 ##### CU19. Cancelar reserva de sala
 * **Caso de Uso:** CU19. Cancelar reserva de sala
-* **Propósito:** Permitir al docente o al Administrador desistir o anular una reserva de laboratorio previamente programada, liberando inmediatamente la franja horaria.
-* **Descripción:** Caso de uso que extiende a la consulta de reservas. Cuando un docente verifica que no podrá impartir su clase práctica en la sala reservada, selecciona su reserva y confirma la cancelación justificando el motivo, restituyendo la disponibilidad del aula en el calendario institucional.
-* **Actores:** Docente, Administrador / Jefatura CITEF
-* **Actor Iniciador:** Docente (para sus reservas) / Administrador (para cualquier reserva)
+* **Propósito:** Permitir exclusivamente al docente solicitante (o al Administrador) desistir de su reserva programada, liberando de inmediato la franja horaria.
+* **Descripción:** Caso de uso que extiende condicionalmente a la consulta de reservas. Se distingue formalmente del rechazo de Jefatura: la cancelación corresponde a la anulación voluntaria efectuada por el docente titular de la cátedra cuando suspende su práctica, quedando el turno disponible para reasignación.
+* **Actores:** Docente Titular, Administrador / Jefatura CITEF
+* **Actor Iniciador:** Docente Titular (para sus reservas) / Administrador
 * **Precondición:** Reserva en estado pendiente o aprobada perteneciente al docente solicitante.
 * **Relaciones UML:** `<<extend>>` hacia **CU17. Consultar reservas de sala** (Punto de extensión: *Desistimiento voluntario de horario por el docente*).
 * **Proceso Principal:**
   1. El docente visualiza sus reservas en el calendario mediante CU17.
-  2. Selecciona la reserva programada y hace clic en "Cancelar Reserva".
-  3. Ingresa la justificación de la cancelación.
-  4. El sistema actualiza el estado a "Cancelada", libera el bloque horario en el calendario institucional y notifica a los auxiliares de turno.
+  2. Selecciona su reserva y pulsa el botón de peligro "Cancelar Reserva".
+  3. Ingresa el motivo formal de la cancelación.
+  4. El sistema actualiza el estado a `CANCELADA`, libera la sala en la grilla y emite la actualización por WebSockets.
 * **Postcondición:** Reserva cancelada y horario liberado para otros docentes. La operación queda registrada en la bitácora de auditoría.
-* **Excepciones:** Intento de cancelación de una reserva ajena sin privilegios administrativos.
+* **Excepciones:** Intento de cancelación por un docente no titular de la solicitud.
 
 ##### CU20. Gestionar reservas de sala
 * **Caso de Uso:** CU20. Gestionar reservas de sala
-* **Propósito:** Evaluar, aprobar, rechazar o reprogramar las solicitudes de reservas de laboratorios formuladas por los docentes.
-* **Descripción:** La Jefatura revisa las solicitudes pendientes en su bandeja de gestión. Incluye obligatoriamente la validación de disponibilidad de horarios para confirmar la aprobación formal de la reserva (bloqueando el espacio en el calendario oficial) o registra el rechazo motivado.
+* **Propósito:** Evaluar, dictaminar formalmente (Aprobar / Rechazar) las solicitudes de reservas y posibilitar la **aprobación masiva en lote de clases recurrentes semestrales**.
+* **Descripción:** La Jefatura revisa las solicitudes pendientes en su bandeja de gestión con filtros avanzados y paginación de 15 filas. Incluye obligatoriamente la validación de disponibilidad de horarios para confirmar la aprobación. Si la solicitud corresponde a una cátedra regular programada para todo el semestre, la Jefatura puede activar la opción **"Aprobar en lote todas las clases recurrentes de este semestre"**, autorizando de forma automática hasta 30+ clases del ciclo con una sola acción administrativa.
 * **Actores:** Administrador / Jefatura CITEF
 * **Actor Iniciador:** Administrador / Jefatura CITEF
 * **Precondición:** Solicitudes de reserva en estado "Pendiente".
 * **Relaciones UML:** `<<include>>` hacia **CU18. Validar disponibilidad de horarios**.
 * **Proceso Principal:**
-  1. La Jefatura accede a la bandeja de gestión de reservas.
-  2. Selecciona una solicitud pendiente y revisa los datos de materia, docente y capacidad requerida.
-  3. El sistema ejecuta `<<include>>` **CU18. Validar disponibilidad de horarios** para revalidar que la franja horaria continúe libre.
-  4. La Jefatura selecciona "Aprobar" o "Rechazar" (ingresando justificación obligatoria).
-  5. El sistema actualiza el estado a "Aprobada" o "Rechazada" y refleja el cambio en el calendario oficial de laboratorios.
-* **Postcondición:** Reserva evaluada y estado reflejado en el calendario oficial. La operación queda registrada en la bitácora de auditoría.
-* **Excepciones:** Colisión horaria sobrevenida.
+  1. La Jefatura accede a la bandeja de gestión de reservas o pulsa sobre una solicitud en el calendario.
+  2. Selecciona "Aprobar Solicitud" o "Rechazar".
+  3. Si es aprobación y la reserva es de tipo `CLASE`, el modal presenta la opción interactiva para aprobar en lote todas las clases recurrentes pendientes del semestre (`aprobar_todas_recurrentes`).
+  4. Si es rechazo, el sistema exige obligatoriamente registrar la justificación formal o motivo de incompatibilidad.
+  5. El sistema ejecuta `<<include>>` **CU18. Validar disponibilidad de horarios** para confirmar la ausencia de colisiones.
+  6. Actualiza el estado en base de datos, asigna el `id_usuario_administrador`, registra la auditoría forense con valores anteriores/nuevos y propaga el dictamen por WebSockets.
+* **Postcondición:** Reserva(s) dictaminada(s) y reflejada(s) en tiempo real en el calendario. La operación queda registrada en la bitácora de auditoría.
+* **Excepciones:** Conflicto horario sobrevenido en el momento de la confirmación.
 
 ---
 
@@ -660,20 +665,51 @@ flowchart TD
 
 #### Paquete 9: Reportes e Indicadores para Acreditación Académica y Asistente Analítico
 
-##### CU27. Generar reportes dinámicos y consultas analíticas
-* **Caso de Uso:** CU27. Generar reportes dinámicos y consultas analíticas
-* **Propósito:** Producir estadísticas y reportes consolidados oficiales para Acreditación y permitir consultas analíticas en lenguaje natural mediante un Asistente Text-to-SQL seguro.
-* **Descripción:** La Jefatura genera reportes a la medida filtrando por fechas, laboratorios, carreras, turnos y docentes, o interactúa con el **Asistente Analítico Inteligente** ingresando preguntas en lenguaje natural que el sistema resuelve sobre una réplica de solo lectura mediante Tool Calling tipado. Incluye obligatoriamente la consulta de asistencias históricas para consolidar métricas, presentando cuadros tabulares con gráficos y permitiendo la exportación a formatos oficiales PDF y Excel.
+##### CU27. Generar reportes dinámicos y consultas analíticas (Dashboard Gerencial)
+* **Caso de Uso:** CU27. Generar reportes dinámicos y consultas analíticas (Dashboard Gerencial)
+* **Propósito:** Producir un **Dashboard Ejecutivo Integral** con KPIs estratégicos, gráficos interactivos de alta fidelidad, generación de informes oficiales descargables en PDF y Excel para Decanatura/Acreditación, y resolución de consultas analíticas en lenguaje natural (Text-to-SQL seguro).
+* **Descripción:** La Jefatura y el Administrador acceden a una suite completa de Inteligencia Institucional que incluye:
+  1. **Tarjetas de KPIs Gerenciales en Tiempo Real:**
+     * *Tasa Global de Ocupación de Laboratorios:* Porcentaje de uso sobre la capacidad instalada.
+     * *Horas Cátedra Dictadas:* Acumulado de horas de uso docente para acreditación.
+     * *Índice de Evaluaciones Prioritarias:* Registro de exámenes atendidos y clases regularizadas.
+     * *Tiempo Medio de Uso por Alumno:* Permanencia promedio por sesión en minutos.
+     * *Salud del Parque Informático:* Total de computadoras operativas vs en mantenimiento preventivo/correctivo.
+     * *Efectividad Algorítmica:* Colisiones insalvables prevenidas automáticamente por el motor matemático.
+  2. **Gráficos Dinámicos Interactivos de Alto Impacto Visual:**
+     * *Gráfico de Torta / Donut:* Proporción porcentual de uso distribuida por Carrera Curricular (Economía, Administración de Empresas, Contaduría Pública, Ingeniería Comercial, Ingeniería Financiera, etc.).
+     * *Gráficos de Barras Agrupadas:* Comparativa de concurrencia y aforo utilizado por cada Laboratorio (`LAB-01` a `LAB-46`) y distribución de asistencia por día hábil (Lunes a Sábado).
+     * *Gráfico de Líneas Temporal (Line Chart):* Evolución de demanda horaria semanal/mensual, con trazado comparativo entre horas solicitadas vs ejecutadas.
+     * *Mapa de Calor Horario (Heatmap):* Matriz de densidad de concurrencia desde las 07:00 hasta las 22:00 horas para detectar cuellos de botella e intervalos de holgura.
+  3. **Motor de Exportación Multi-Formato Oficial FCEE:**
+     * *PDF Institucional Formal:* Diseñado con el membrete oficial de la FCEE - UAGRM, pie de página institucional, marcas de agua de auditoría, paginación formal y casillas para firmas de Jefatura y Decanatura.
+     * *Excel Estructurado (`.xlsx`):* Libro de cálculo con hojas dinámicas, cabeceras estilizadas y tipos de datos numéricos nativos para facilitar análisis presupuestarios y de planificación docente.
+  4. **Catálogo de Informes Parametrizados:**
+     * Reporte de Cátedras y Cumplimiento Docente por Materia y Grupo.
+     * Reporte de Ocupación y Tasa de Retorno de Aulas de Cómputo.
+     * Reporte de Confiabilidad y Salud de Equipos RAMS (MTBF, MTTR, Disponibilidad $A$).
+     * Reporte Forense de Auditoría Transaccional vinculada a Administradores/Usuarios.
+  5. **Asistente Text-to-SQL Seguro:** Consultas en lenguaje natural procesadas sobre réplica de solo lectura mediante Tool Calling tipado.
 * **Actores:** Administrador / Jefatura CITEF
 * **Actor Iniciador:** Administrador / Jefatura CITEF
-* **Precondición:** Registros operacionales acumulados en el sistema.
+* **Precondición:** Registros operacionales acumulados en la base de datos institucional.
 * **Relaciones UML:** `<<include>>` hacia **CU15. Consultar asistencias de estudiantes**.
 * **Proceso Principal:**
   1. La Jefatura ingresa al módulo de "Reportes y Acreditación".
-  2. Puede optar por los filtros dinámicos (periodo, sala, carrera) o redactar una pregunta analítica en el Asistente en Lenguaje Natural.
-  3. El sistema ejecuta `<<include>>` **CU15. Consultar asistencias de estudiantes** para procesar y totalizar las métricas correspondientes.
-  4. Despliega la vista interactiva con gráficos, indicadores de uso y disponibilidad ($A$, MTBF, MTTR).
-  5. La Jefatura selecciona exportar a PDF o Excel; el sistema compila y descarga el documento oficial estructurado.
-* **Postcondición:** Reporte oficial generado y exportado. La operación queda registrada en la bitácora de auditoría.
-* **Excepciones:** No existen registros coincidentes con los filtros seleccionados o consulta en lenguaje natural ambigua.
-* **Excepciones:** Ausencia de registros para los filtros seleccionados.
+  2. El sistema renderiza el Dashboard Ejecutivo con las tarjetas de KPIs en tiempo real y la batería de gráficos (Donut, Barras, Líneas y Heatmap).
+  3. El usuario aplica filtros por periodo lectivo, carrera, materia, sala o docente, o introduce una consulta analítica en el Asistente en Lenguaje Natural.
+  4. El sistema ejecuta `<<include>>` **CU15. Consultar asistencias de estudiantes** para recopilar y totalizar los registros operacionales históricos.
+  5. Despliega la información consolidada en pantalla y permite seleccionar el formato de exportación deseado ("Exportar PDF Oficial" o "Exportar Excel").
+  6. El sistema compila el archivo estructurado con firma digital y hash criptográfico, registra la descarga en auditoría y entrega el archivo al usuario.
+* **Postcondición:** Reporte oficial generado, exportado y archivado en `documento_reporte_exportado`. La operación queda registrada en la bitácora de auditoría.
+* **Excepciones:** Ausencia de registros coincidentes con los filtros seleccionados o consulta en lenguaje natural ambigua.
+
+---
+
+### 4. Resumen de Actualizaciones y Control de Versiones del Documento
+
+| Versión | Fecha | Paquetes de Casos de Uso Modificados | Resumen de Mejoras y Actualizaciones Metodológicas |
+| :--- | :--- | :--- | :--- |
+| **v2.1** | 2026-10-23 | Paquete 5 (CU16, CU17, CU18, CU19, CU20), Paquete 9 (CU27) | **1. Aprobación en Lote (CU20):** Incorporación de la opción `aprobar_todas_recurrentes` para dictaminar con un solo clic hasta 30+ clases semestrales.<br>**2. Soporte Multi-Sala y Prioridad Académica (CU16, CU18):** Reparto proporcional de aforo sin sobrecupo y desplazamiento automático de cátedras por exámenes.<br>**3. Vista de Día Dinámica (CU17):** Particionamiento horizontal estilo Google Calendar.<br>**4. Cancelación vs Rechazo (CU19, CU20):** Separación explícita entre desistimiento del docente y dictamen formal de Jefatura.<br>**5. Dashboard Ejecutivo y Reportes (CU27 - Requisito de Defensa II):** Especificación completa del Dashboard de Inteligencia con KPIs, 4 tipos de gráficos (Donut, Barras, Líneas, Heatmap) y exportación oficial en PDF institucional y Excel. |
+| **v2.0** | 2026-10-18 | Paquete 1 al 9 (CU1 a CU27) | Normalización según estándar RUP y UML 2.5: verbos directos en infinitivo, eliminación de conjunciones "y", actores exclusivamente humanos, formalización de 10 relaciones `<<include>>` y `<<extend>>`. |
+| **v1.0** | 2026-10-10 | Documento Completo | Catálogo preliminar de casos de uso para los 8 módulos del CITEF FCEE UAGRM. |
