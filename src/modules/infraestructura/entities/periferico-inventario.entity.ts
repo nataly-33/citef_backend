@@ -9,11 +9,19 @@ import {
 } from 'typeorm';
 import { Computadora } from './computadora.entity';
 import { TipoPeriferico } from './tipo-periferico.entity';
+import { Usuario } from '../../usuarios/entities/usuario.entity';
 
 @Entity('periferico_inventario')
 export class PerifericoInventario {
   @PrimaryGeneratedColumn({ type: 'bigint', name: 'id_periferico' })
   id_periferico: number;
+
+  @Column({ name: 'id_usuario_administrador', type: 'bigint', nullable: true })
+  id_usuario_administrador: number | null;
+
+  @ManyToOne(() => Usuario, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'id_usuario_administrador' })
+  administrador: Usuario | null;
 
   @Column({ type: 'bigint', nullable: true })
   id_computadora: number | null;

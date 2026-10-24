@@ -11,6 +11,11 @@ import {
 import { Rol } from './rol.entity';
 import { TokenRecuperacion } from './token-recuperacion.entity';
 import { BitacoraAuditoria } from '../../auditoria/entities/bitacora-auditoria.entity';
+import { LaboratorioSala } from '../../infraestructura/entities/laboratorio-sala.entity';
+import { Computadora } from '../../infraestructura/entities/computadora.entity';
+import { ReservaSala } from '../../reservas/entities/reserva-sala.entity';
+import { AsignacionSesion } from '../../ocupacion/entities/asignacion-sesion.entity';
+import { AsignarTurno } from '../../catalogos/entities/asignar-turno.entity';
 
 @Entity('usuario')
 export class Usuario {
@@ -54,4 +59,19 @@ export class Usuario {
 
   @OneToMany(() => BitacoraAuditoria, (audit) => audit.usuario)
   auditorias: BitacoraAuditoria[];
+
+  @OneToMany(() => LaboratorioSala, (sala) => sala.administrador)
+  salas_administradas: LaboratorioSala[];
+
+  @OneToMany(() => Computadora, (pc) => pc.administrador)
+  computadoras_inventariadas: Computadora[];
+
+  @OneToMany(() => ReservaSala, (res) => res.administrador)
+  reservas_administradas: ReservaSala[];
+
+  @OneToMany(() => AsignacionSesion, (ses) => ses.auxiliar)
+  sesiones_auxiliar: AsignacionSesion[];
+
+  @OneToMany(() => AsignarTurno, (t) => t.usuario)
+  turnos_guardia: AsignarTurno[];
 }

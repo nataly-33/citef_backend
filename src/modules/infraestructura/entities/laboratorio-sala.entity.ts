@@ -5,13 +5,23 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Computadora } from './computadora.entity';
+import { Usuario } from '../../usuarios/entities/usuario.entity';
 
 @Entity('laboratorio_sala')
 export class LaboratorioSala {
   @PrimaryGeneratedColumn({ name: 'id_sala' })
   id_sala: number;
+
+  @Column({ name: 'id_usuario_administrador', type: 'bigint', nullable: true })
+  id_usuario_administrador: number | null;
+
+  @ManyToOne(() => Usuario, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'id_usuario_administrador' })
+  administrador: Usuario | null;
 
   @Column({ type: 'varchar', length: 20, unique: true })
   codigo_sala: string;

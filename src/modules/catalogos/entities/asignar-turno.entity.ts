@@ -21,6 +21,13 @@ export class AsignarTurno {
   @JoinColumn({ name: 'id_usuario' })
   usuario: Usuario;
 
+  @Column({ type: 'bigint', name: 'id_usuario_administrador', nullable: true })
+  id_usuario_administrador: number | null;
+
+  @ManyToOne(() => Usuario, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'id_usuario_administrador' })
+  administrador: Usuario | null;
+
   @Column({ type: 'int', name: 'id_horario' })
   id_horario: number;
 

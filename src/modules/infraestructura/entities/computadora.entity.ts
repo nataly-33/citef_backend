@@ -11,12 +11,20 @@ import {
 } from 'typeorm';
 import { LaboratorioSala } from './laboratorio-sala.entity';
 import { PerifericoInventario } from './periferico-inventario.entity';
+import { Usuario } from '../../usuarios/entities/usuario.entity';
 
 @Entity('computadora')
 @Unique('uq_sala_posicion', ['id_sala', 'posicion_fila', 'posicion_columna'])
 export class Computadora {
   @PrimaryGeneratedColumn({ type: 'bigint', name: 'id_computadora' })
   id_computadora: number;
+
+  @Column({ name: 'id_usuario_administrador', type: 'bigint', nullable: true })
+  id_usuario_administrador: number | null;
+
+  @ManyToOne(() => Usuario, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'id_usuario_administrador' })
+  administrador: Usuario | null;
 
   @Column({ type: 'integer' })
   id_sala: number;

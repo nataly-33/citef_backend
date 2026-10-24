@@ -512,7 +512,7 @@ export class SeedService implements OnApplicationBootstrap {
     for (const s of salasData) {
       let sala = await this.salaRepo.findOne({ where: { codigo_sala: s.codigo_sala } });
       if (!sala) {
-        sala = await this.salaRepo.save(this.salaRepo.create({ ...s, activo: true }));
+        sala = await this.salaRepo.save(this.salaRepo.create({ ...s, id_usuario_administrador: 1, activo: true }));
         this.logger.log(`Sala creada: ${s.codigo_sala} - ${s.nombre}`);
 
         // Si es LAB-01, generar estaciones de trabajo iniciales
@@ -521,6 +521,7 @@ export class SeedService implements OnApplicationBootstrap {
           const pcDocente = await this.computadoraRepo.save(
             this.computadoraRepo.create({
               id_sala: sala.id_sala,
+              id_usuario_administrador: 1,
               codigo_equipo: 'L1-DOCENTE',
               maquina_docente: true,
               posicion_fila: 1,
@@ -542,6 +543,7 @@ export class SeedService implements OnApplicationBootstrap {
               const pc = await this.computadoraRepo.save(
                 this.computadoraRepo.create({
                   id_sala: sala.id_sala,
+                  id_usuario_administrador: 1,
                   codigo_equipo: `L1-PC${numStr}`,
                   maquina_docente: false,
                   posicion_fila: f,
