@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { ReservaSala, EstadoReserva, TipoReserva } from '../entities/reserva-sala.entity';
 import { AlgoritmoDisponibilidadService } from './algoritmo-disponibilidad.service';
 import { ReservasGateway } from '../gateways/reservas.gateway';
@@ -81,91 +81,163 @@ export class ReservasService {
 
     const tipoReserva = dto.tipo_reserva || TipoReserva.CLASE;
 
-    // 3. Manejo de programación semestral recurrente
-    if (dto.fecha_fin_semestre && dto.fecha_fin_semestre > dto.fecha_reserva) {
-      return this.crearLoteRecurrente(dto, tipoReserva, currentUser, ip);
-    }
-
-    // 4. Validar disponibilidad algorítmica estricta (CU18)
-    const validacion = await this.algoritmoService.validarDisponibilidad(
-      dto.id_sala,
-      dto.fecha_reserva,
-      dto.hora_inicio,
-      dto.hora_fin,
-      dto.cant_estimada_alumnos,
-      undefined,
-      tipoReserva,
+    // Normalizar salas seleccionadas (soporte multi-sala para cátedras con muchos alumnos)
+    const idsSalas = Array.from(
+      new Set(
+        dto.ids_salas && dto.ids_salas.length > 0
+          ? dto.ids_salas.map(Number)
+          : [Number(dto.id_sala)],
+      ),
     );
 
-    if (!validacion.disponible) {
-      throw new ConflictException(validacion.mensaje);
+    const salas = await this.salaRepository.find({
+      where: { id_sala: In(idsSalas) },
+    });
+    if (salas.length !== idsSalas.length) {
+      throw new NotFoundException('Una o más salas seleccionadas no existen en el sistema');
     }
 
-    // Si es un EXAMEN con prioridad sobre una clase desplazable, notificar y desplazar
-    let notifDesplazamiento: string | null = null;
-    if (
-      tipoReserva === TipoReserva.EXAMEN &&
-      validacion.reservaConflicto &&
-      validacion.reservaConflicto.esDesplazable
-    ) {
-      const claseId = validacion.reservaConflicto.id_reserva;
-      notifDesplazamiento = `Prioridad de Examen: reprograma el turno ocupado previamente por ${validacion.reservaConflicto.docente_nombre}`;
-      await this.reservaRepository.update(claseId, {
+    // Validar capacidad combinada total
+    const capacidadTotal = salas.reduce((acc, s) => acc + (s.cant_estudiantes || 0), 0);
+    if (dto.cant_estimada_alumnos > capacidadTotal) {
+      throw new BadRequestException(
+        `La cantidad estimada (${dto.cant_estimada_alumnos} alumnos) excede la capacidad combinada de las salas seleccionadas (${capacidadTotal} puestos).`,
+      );
+    }
+
+    // 3. Manejo de programación semestral recurrente
+    if (dto.fecha_fin_semestre && dto.fecha_fin_semestre > dto.fecha_reserva) {
+      return this.crearLoteRecurrente(dto, salas, capacidadTotal, tipoReserva, currentUser, ip);
+    }
+
+    // Proporción por sala basada en la capacidad física individual
+    let restante = dto.cant_estimada_alumnos;
+    const asignaciones: { sala: LaboratorioSala; cant: number }[] = [];
+    for (let i = 0; i < salas.length; i++) {
+      const s = salas[i];
+      if (i === salas.length - 1) {
+        asignaciones.push({
+          sala: s,
+          cant: Math.min(s.cant_estudiantes, Math.max(1, restante)),
+        });
+      } else {
+        const prop = Math.round(dto.cant_estimada_alumnos * (s.cant_estudiantes / capacidadTotal));
+        const asignada = Math.min(
+          s.cant_estudiantes,
+          Math.max(1, Math.min(restante - (salas.length - 1 - i), prop)),
+        );
+        asignaciones.push({ sala: s, cant: asignada });
+        restante -= asignada;
+      }
+    }
+
+    // 4. Validar disponibilidad algorítmica para cada sala
+    for (const a of asignaciones) {
+      const validacion = await this.algoritmoService.validarDisponibilidad(
+        a.sala.id_sala,
+        dto.fecha_reserva,
+        dto.hora_inicio,
+        dto.hora_fin,
+        a.cant,
+        undefined,
+        tipoReserva,
+      );
+
+      if (!validacion.disponible) {
+        throw new ConflictException(
+          `Conflicto en la sala ${a.sala.codigo_sala}: ${validacion.mensaje}`,
+        );
+      }
+
+      // Si es un EXAMEN con prioridad sobre una clase regular desplazable
+      if (
+        tipoReserva === TipoReserva.EXAMEN &&
+        validacion.reservaConflicto &&
+        validacion.reservaConflicto.esDesplazable
+      ) {
+        const claseId = validacion.reservaConflicto.id_reserva;
+        await this.reservaRepository.update(claseId, {
+          estado: EstadoReserva.PENDIENTE,
+          notificacion_docente: `Su clase del día ${dto.fecha_reserva} (${dto.hora_inicio}-${dto.hora_fin}) fue reprogramada por aplicación prioritaria de Examen de ${materia.sigla}.`,
+          editada: true,
+        });
+      }
+    }
+
+    const idGrupo =
+      salas.length > 1
+        ? `GRP_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+        : null;
+
+    const salasGrupoJson =
+      salas.length > 1
+        ? asignaciones.map((a) => ({
+            id_sala: a.sala.id_sala,
+            codigo_sala: a.sala.codigo_sala,
+            nombre: a.sala.nombre,
+            capacidad: a.sala.cant_estudiantes,
+            cant_asignada: a.cant,
+          }))
+        : null;
+
+    // 5. Crear la(s) entidad(es) de reserva
+    const creadas: ReservaSala[] = [];
+    for (const a of asignaciones) {
+      const nuevaReserva = this.reservaRepository.create({
+        id_sala: a.sala.id_sala,
+        codigo_docente: dto.codigo_docente,
+        id_materia: dto.id_materia,
+        fecha_reserva: dto.fecha_reserva,
+        hora_inicio: dto.hora_inicio,
+        hora_fin: dto.hora_fin,
+        tema_practica: dto.tema_practica.trim(),
+        cant_estimada_alumnos: a.cant,
+        cant_total_alumnos: dto.cant_estimada_alumnos,
+        id_grupo_multisala: idGrupo,
+        salas_grupo: salasGrupoJson,
+        tipo_reserva: tipoReserva,
         estado: EstadoReserva.PENDIENTE,
-        notificacion_docente: `Su clase del día ${dto.fecha_reserva} (${dto.hora_inicio}-${dto.hora_fin}) fue reprogramada por aplicación prioritaria de Examen de ${materia.sigla}.`,
-        editada: true,
+        obs_resolucion: null,
+        id_usuario_administrador: null,
+        editada: false,
+      });
+
+      const guardada = await this.reservaRepository.save(nuevaReserva);
+      creadas.push(guardada);
+
+      // 6. Auditoría forense
+      await this.auditoriaService.registrar({
+        id_usuario: currentUser?.id_usuario,
+        correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
+        tabla_afectada: 'reserva_sala',
+        id_registro_afectado: String(guardada.id_reserva),
+        accion: 'INSERT',
+        valores_anteriores: null,
+        valores_nuevos: {
+          id_reserva: guardada.id_reserva,
+          sala: a.sala.id_sala,
+          grupo_multisala: idGrupo,
+          docente: dto.codigo_docente,
+          materia: dto.id_materia,
+          fecha: dto.fecha_reserva,
+          horario: `${dto.hora_inicio} - ${dto.hora_fin}`,
+          alumnos_sala: a.cant,
+          alumnos_totales: dto.cant_estimada_alumnos,
+          tipo: tipoReserva,
+        },
+        ip_cliente: ip,
+      });
+
+      // 7. Notificación WebSocket
+      this.reservasGateway.emitirActualizacionReservas({
+        accion: 'CREADA',
+        id_reserva: guardada.id_reserva,
+        id_sala: guardada.id_sala,
+        fecha_reserva: guardada.fecha_reserva,
       });
     }
 
-    // 5. Crear la entidad de reserva
-    const nuevaReserva = this.reservaRepository.create({
-      id_sala: dto.id_sala,
-      codigo_docente: dto.codigo_docente,
-      id_materia: dto.id_materia,
-      fecha_reserva: dto.fecha_reserva,
-      hora_inicio: dto.hora_inicio,
-      hora_fin: dto.hora_fin,
-      tema_practica: dto.tema_practica.trim(),
-      cant_estimada_alumnos: dto.cant_estimada_alumnos,
-      tipo_reserva: tipoReserva,
-      estado: EstadoReserva.PENDIENTE,
-      obs_resolucion: notifDesplazamiento,
-      id_usuario_administrador: null,
-      editada: false,
-    });
-
-    const guardada = await this.reservaRepository.save(nuevaReserva);
-
-    // 6. Auditoría forense inalterable
-    await this.auditoriaService.registrar({
-      id_usuario: currentUser?.id_usuario,
-      correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
-      tabla_afectada: 'reserva_sala',
-      id_registro_afectado: String(guardada.id_reserva),
-      accion: 'INSERT',
-      valores_anteriores: null,
-      valores_nuevos: {
-        id_reserva: guardada.id_reserva,
-        sala: dto.id_sala,
-        docente: dto.codigo_docente,
-        materia: dto.id_materia,
-        fecha: dto.fecha_reserva,
-        horario: `${dto.hora_inicio} - ${dto.hora_fin}`,
-        alumnos: dto.cant_estimada_alumnos,
-        tipo: tipoReserva,
-      },
-      ip_cliente: ip,
-    });
-
-    // 7. Notificación síncrona en tiempo real vía WebSocket
-    this.reservasGateway.emitirActualizacionReservas({
-      accion: 'CREADA',
-      id_reserva: guardada.id_reserva,
-      id_sala: guardada.id_sala,
-      fecha_reserva: guardada.fecha_reserva,
-    });
-
-    return this.obtenerPorId(guardada.id_reserva);
+    return this.obtenerPorId(creadas[0].id_reserva);
   }
 
   /**
@@ -173,6 +245,8 @@ export class ReservasService {
    */
   private async crearLoteRecurrente(
     dto: SolicitarReservaDto,
+    salas: LaboratorioSala[],
+    capacidadTotal: number,
     tipoReserva: TipoReserva,
     currentUser: any,
     ip: string,
@@ -181,42 +255,119 @@ export class ReservasService {
     const inicio = new Date(dto.fecha_reserva + 'T12:00:00Z');
     const fin = new Date(dto.fecha_fin_semestre + 'T12:00:00Z');
 
-    const diaObjetivo = inicio.getUTCDay(); // 0 a 6
+    const diasObjetivo: number[] =
+      dto.dias_semana && dto.dias_semana.length > 0
+        ? dto.dias_semana.map(Number)
+        : [inicio.getUTCDay()];
+
     const reservasCreadas: ReservaSala[] = [];
 
     const actual = new Date(inicio);
     while (actual <= fin) {
-      if (actual.getUTCDay() === diaObjetivo) {
+      if (diasObjetivo.includes(actual.getUTCDay())) {
         const fechaIso = actual.toISOString().split('T')[0];
         try {
-          // Validar disponibilidad
-          const val = await this.algoritmoService.validarDisponibilidad(
-            dto.id_sala,
-            fechaIso,
-            dto.hora_inicio,
-            dto.hora_fin,
-            dto.cant_estimada_alumnos,
-            undefined,
-            tipoReserva,
-          );
+          if (salas.length === 1) {
+            const val = await this.algoritmoService.validarDisponibilidad(
+              salas[0].id_sala,
+              fechaIso,
+              dto.hora_inicio,
+              dto.hora_fin,
+              dto.cant_estimada_alumnos,
+              undefined,
+              tipoReserva,
+            );
 
-          if (val.disponible) {
-            const r = this.reservaRepository.create({
-              id_sala: dto.id_sala,
-              codigo_docente: dto.codigo_docente,
-              id_materia: dto.id_materia,
-              fecha_reserva: fechaIso,
-              hora_inicio: dto.hora_inicio,
-              hora_fin: dto.hora_fin,
-              tema_practica: `${dto.tema_practica.trim()} (Clase Semestral)`,
-              cant_estimada_alumnos: dto.cant_estimada_alumnos,
-              tipo_reserva: tipoReserva,
-              estado: EstadoReserva.PENDIENTE,
-              id_lote_recurrente: idLote,
-              editada: false,
-            });
-            const guardada = await this.reservaRepository.save(r);
-            reservasCreadas.push(guardada);
+            if (val.disponible) {
+              const r = this.reservaRepository.create({
+                id_sala: salas[0].id_sala,
+                codigo_docente: dto.codigo_docente,
+                id_materia: dto.id_materia,
+                fecha_reserva: fechaIso,
+                hora_inicio: dto.hora_inicio,
+                hora_fin: dto.hora_fin,
+                tema_practica: dto.tema_practica.trim(),
+                cant_estimada_alumnos: dto.cant_estimada_alumnos,
+                cant_total_alumnos: dto.cant_estimada_alumnos,
+                tipo_reserva: tipoReserva,
+                estado: EstadoReserva.PENDIENTE,
+                id_lote_recurrente: idLote,
+                editada: false,
+              });
+              const guardada = await this.reservaRepository.save(r);
+              reservasCreadas.push(guardada);
+            }
+          } else {
+            // Multi-sala en recurrencia semestral
+            let restante = dto.cant_estimada_alumnos;
+            const asignaciones: { sala: LaboratorioSala; cant: number }[] = [];
+            for (let i = 0; i < salas.length; i++) {
+              const s = salas[i];
+              if (i === salas.length - 1) {
+                asignaciones.push({
+                  sala: s,
+                  cant: Math.min(s.cant_estudiantes, Math.max(1, restante)),
+                });
+              } else {
+                const prop = Math.round(dto.cant_estimada_alumnos * (s.cant_estudiantes / capacidadTotal));
+                const asignada = Math.min(
+                  s.cant_estudiantes,
+                  Math.max(1, Math.min(restante - (salas.length - 1 - i), prop)),
+                );
+                asignaciones.push({ sala: s, cant: asignada });
+                restante -= asignada;
+              }
+            }
+
+            let todasDisponibles = true;
+            for (const a of asignaciones) {
+              const val = await this.algoritmoService.validarDisponibilidad(
+                a.sala.id_sala,
+                fechaIso,
+                dto.hora_inicio,
+                dto.hora_fin,
+                a.cant,
+                undefined,
+                tipoReserva,
+              );
+              if (!val.disponible) {
+                todasDisponibles = false;
+                break;
+              }
+            }
+
+            if (todasDisponibles) {
+              const idGrupo = `GRP_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+              const salasGrupoJson = asignaciones.map((a) => ({
+                id_sala: a.sala.id_sala,
+                codigo_sala: a.sala.codigo_sala,
+                nombre: a.sala.nombre,
+                capacidad: a.sala.cant_estudiantes,
+                cant_asignada: a.cant,
+              }));
+
+              for (const a of asignaciones) {
+                const r = this.reservaRepository.create({
+                  id_sala: a.sala.id_sala,
+                  codigo_docente: dto.codigo_docente,
+                  id_materia: dto.id_materia,
+                  fecha_reserva: fechaIso,
+                  hora_inicio: dto.hora_inicio,
+                  hora_fin: dto.hora_fin,
+                  tema_practica: dto.tema_practica.trim(),
+                  cant_estimada_alumnos: a.cant,
+                  cant_total_alumnos: dto.cant_estimada_alumnos,
+                  id_grupo_multisala: idGrupo,
+                  salas_grupo: salasGrupoJson,
+                  tipo_reserva: tipoReserva,
+                  estado: EstadoReserva.PENDIENTE,
+                  id_lote_recurrente: idLote,
+                  editada: false,
+                });
+                const guardada = await this.reservaRepository.save(r);
+                reservasCreadas.push(guardada);
+              }
+            }
           }
         } catch (e) {
           this.logger.warn(`Omisión de fecha ${fechaIso} por conflicto en lote recurrente: ${e}`);
@@ -236,6 +387,7 @@ export class ReservasService {
         total_clases_programadas: reservasCreadas.length,
         id_lote: idLote,
         rango: `${dto.fecha_reserva} al ${dto.fecha_fin_semestre}`,
+        dias_semana: diasObjetivo,
       },
       ip_cliente: ip,
     });
@@ -250,7 +402,9 @@ export class ReservasService {
       return this.obtenerPorId(reservasCreadas[0].id_reserva);
     }
 
-    throw new ConflictException('No se pudieron programar clases debido a conflictos de horario en el semestre');
+    throw new ConflictException(
+      'No se pudieron programar clases debido a conflictos de horario en el rango semestral',
+    );
   }
 
   /**
@@ -283,102 +437,272 @@ export class ReservasService {
       );
     }
 
-    const valoresAnteriores = {
-      id_sala: reserva.id_sala,
-      fecha_reserva: reserva.fecha_reserva,
-      hora_inicio: reserva.hora_inicio,
-      hora_fin: reserva.hora_fin,
-      tema_practica: reserva.tema_practica,
-      cant_estimada_alumnos: reserva.cant_estimada_alumnos,
-      estado: reserva.estado,
-      tipo_reserva: reserva.tipo_reserva,
-    };
-
-    const nuevaSala = dto.id_sala || reserva.id_sala;
     const nuevaFecha = dto.fecha_reserva || reserva.fecha_reserva;
     const nuevaHoraInicio = dto.hora_inicio || reserva.hora_inicio;
     const nuevaHoraFin = dto.hora_fin || reserva.hora_fin;
-    const nuevaCant = dto.cant_estimada_alumnos || reserva.cant_estimada_alumnos;
     const nuevoTipo = dto.tipo_reserva || reserva.tipo_reserva;
+    const nuevoTema = dto.tema_practica ? dto.tema_practica.trim() : reserva.tema_practica;
+    const nuevaCantTotal = dto.cant_estimada_alumnos || reserva.cant_total_alumnos || reserva.cant_estimada_alumnos;
 
-    // Validar disponibilidad horaria si cambiaron sala, fecha u horarios
-    if (
-      nuevaSala !== reserva.id_sala ||
-      nuevaFecha !== reserva.fecha_reserva ||
-      nuevaHoraInicio !== reserva.hora_inicio ||
-      nuevaHoraFin !== reserva.hora_fin
-    ) {
+    // Obtener todas las reservas vinculadas si es un grupo multi-sala
+    const reservasGrupo = reserva.id_grupo_multisala
+      ? await this.reservaRepository.find({
+          where: { id_grupo_multisala: reserva.id_grupo_multisala },
+          relations: { sala: true },
+        })
+      : [reserva];
+
+    const grupoIds = reservasGrupo.map((r) => r.id_reserva);
+
+    // Determinar las salas seleccionadas/deseadas
+    let idsSalasDeseadas: number[];
+    if (dto.ids_salas && dto.ids_salas.length > 0) {
+      idsSalasDeseadas = Array.from(new Set(dto.ids_salas.map(Number)));
+    } else if (dto.id_sala) {
+      idsSalasDeseadas = [Number(dto.id_sala)];
+    } else {
+      idsSalasDeseadas = [Number(reserva.id_sala)];
+    }
+
+    const salasDeseadas = await this.salaRepository.find({
+      where: { id_sala: In(idsSalasDeseadas) },
+    });
+
+    if (salasDeseadas.length !== idsSalasDeseadas.length) {
+      throw new NotFoundException('Una o más salas seleccionadas no existen en el sistema');
+    }
+
+    // Mantener el orden de idsSalasDeseadas
+    salasDeseadas.sort(
+      (a, b) => idsSalasDeseadas.indexOf(a.id_sala) - idsSalasDeseadas.indexOf(b.id_sala),
+    );
+
+    // Validar capacidad combinada total
+    const capTotal = salasDeseadas.reduce(
+      (acc, s) => acc + (s.cant_estudiantes || 0),
+      0,
+    );
+    if (nuevaCantTotal > capTotal) {
+      const salasNombres = salasDeseadas.map((s) => s.codigo_sala).join(' + ');
+      throw new BadRequestException(
+        `La cantidad estimada (${nuevaCantTotal} alumnos) excede la capacidad combinada de ${salasNombres} (${capTotal} puestos).`,
+      );
+    }
+
+    // Reparto proporcional por sala
+    let restante = nuevaCantTotal;
+    const asignaciones: { sala: LaboratorioSala; cant: number }[] = [];
+    for (let i = 0; i < salasDeseadas.length; i++) {
+      const s = salasDeseadas[i];
+      if (i === salasDeseadas.length - 1) {
+        asignaciones.push({
+          sala: s,
+          cant: Math.min(s.cant_estudiantes, Math.max(1, restante)),
+        });
+      } else {
+        const prop = Math.round(nuevaCantTotal * (s.cant_estudiantes / capTotal));
+        const asignada = Math.min(
+          s.cant_estudiantes,
+          Math.max(1, Math.min(restante - (salasDeseadas.length - 1 - i), prop)),
+        );
+        asignaciones.push({ sala: s, cant: asignada });
+        restante -= asignada;
+      }
+    }
+
+    // Validar disponibilidad horaria de cada sala
+    for (const a of asignaciones) {
       const val = await this.algoritmoService.validarDisponibilidad(
-        nuevaSala,
+        a.sala.id_sala,
         nuevaFecha,
         nuevaHoraInicio,
         nuevaHoraFin,
-        nuevaCant,
-        id_reserva,
+        a.cant,
+        grupoIds,
         nuevoTipo,
       );
 
       if (!val.disponible) {
-        throw new ConflictException(val.mensaje);
+        throw new ConflictException(
+          `Conflicto en la sala ${a.sala.codigo_sala}: ${val.mensaje}`,
+        );
       }
     }
 
-    // Aplicar cambios
-    reserva.id_sala = nuevaSala;
-    reserva.fecha_reserva = nuevaFecha;
-    reserva.hora_inicio = nuevaHoraInicio;
-    reserva.hora_fin = nuevaHoraFin;
-    if (dto.tema_practica) reserva.tema_practica = dto.tema_practica.trim();
-    if (dto.cant_estimada_alumnos) reserva.cant_estimada_alumnos = dto.cant_estimada_alumnos;
-    if (dto.tipo_reserva) reserva.tipo_reserva = dto.tipo_reserva;
+    // Reglas de estado y notas de edición
+    let nuevoEstado = reserva.estado;
+    let nuevaEditada = true;
+    let nuevaObsResolucion = reserva.obs_resolucion;
+    let nuevaNotificacionDocente = reserva.notificacion_docente;
 
-    // Regla de negocio de edición:
-    // Siempre se marca 'editada = true' para que el Administrador vea el puntito rojo en el calendario.
-    reserva.editada = true;
-
-    // Si la editó el docente, vuelve a PENDIENTE para que Jefatura la revise y dictamine de nuevo.
     if (!esAdmin) {
-      reserva.estado = EstadoReserva.PENDIENTE;
-      reserva.obs_resolucion = `Modificada por el docente solicitante: ${dto.obs_edicion || 'Horario/sala actualizada'}`;
+      // Docente edita: vuelve a PENDIENTE para revisión de Jefatura y marca editada
+      nuevoEstado = EstadoReserva.PENDIENTE;
+      nuevaObsResolucion = `Modificada por el docente solicitante: ${dto.obs_edicion || 'Horario/sala actualizada'}`;
     } else {
-      // Si la editó el administrador, registra notificación formal para el docente
+      // Administrador edita: mantiene aprobación previa pero notifica al docente
       if (dto.obs_edicion) {
-        reserva.notificacion_docente = dto.obs_edicion.trim();
+        nuevaNotificacionDocente = dto.obs_edicion.trim();
       }
     }
 
-    const actualizada = await this.reservaRepository.save(reserva);
+    // Actualizar registros en base de datos
+    if (asignaciones.length === 1) {
+      // Caso A: Se asigna una sola sala (o se reduce de multi-sala a individual)
+      const asigUnica = asignaciones[0];
+
+      // Eliminar reservas secundarias si antes era multi-sala
+      for (const rg of reservasGrupo) {
+        if (rg.id_reserva !== reserva.id_reserva) {
+          await this.reservaRepository.delete(rg.id_reserva);
+        }
+      }
+
+      // Actualizar registro principal de forma atómica en BD
+      await this.reservaRepository.update(reserva.id_reserva, {
+        id_sala: asigUnica.sala.id_sala,
+        id_grupo_multisala: null,
+        salas_grupo: null,
+        cant_estimada_alumnos: asigUnica.cant,
+        cant_total_alumnos: nuevaCantTotal,
+        fecha_reserva: nuevaFecha,
+        hora_inicio: nuevaHoraInicio,
+        hora_fin: nuevaHoraFin,
+        tema_practica: nuevoTema,
+        tipo_reserva: nuevoTipo,
+        estado: nuevoEstado,
+        editada: nuevaEditada,
+        obs_resolucion: nuevaObsResolucion,
+        notificacion_docente: nuevaNotificacionDocente,
+      });
+    } else {
+      // Caso B: Multi-sala (2 o más salas)
+      const idGrupo =
+        reserva.id_grupo_multisala ||
+        `GRP_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+      const salasGrupoJson = asignaciones.map((a) => ({
+        id_sala: a.sala.id_sala,
+        codigo_sala: a.sala.codigo_sala,
+        nombre: a.sala.nombre,
+        capacidad: a.sala.cant_estudiantes,
+        cant_asignada: a.cant,
+      }));
+
+      // Actualizar la reserva primaria con la primera sala
+      await this.reservaRepository.update(reserva.id_reserva, {
+        id_sala: asignaciones[0].sala.id_sala,
+        id_grupo_multisala: idGrupo,
+        salas_grupo: salasGrupoJson,
+        cant_estimada_alumnos: asignaciones[0].cant,
+        cant_total_alumnos: nuevaCantTotal,
+        fecha_reserva: nuevaFecha,
+        hora_inicio: nuevaHoraInicio,
+        hora_fin: nuevaHoraFin,
+        tema_practica: nuevoTema,
+        tipo_reserva: nuevoTipo,
+        estado: nuevoEstado,
+        editada: nuevaEditada,
+        obs_resolucion: nuevaObsResolucion,
+        notificacion_docente: nuevaNotificacionDocente,
+      });
+
+      // Gestionar salas secundarias (actualizar existentes o crear nuevas o eliminar excedentes)
+      const secundariasExistentes = reservasGrupo.filter(
+        (rg) => rg.id_reserva !== reserva.id_reserva,
+      );
+      const asignacionesSecundarias = asignaciones.slice(1);
+
+      for (
+        let i = 0;
+        i < Math.max(secundariasExistentes.length, asignacionesSecundarias.length);
+        i++
+      ) {
+        if (i < asignacionesSecundarias.length && i < secundariasExistentes.length) {
+          // Actualizar secundaria existente
+          const asig = asignacionesSecundarias[i];
+          await this.reservaRepository.update(secundariasExistentes[i].id_reserva, {
+            id_sala: asig.sala.id_sala,
+            id_grupo_multisala: idGrupo,
+            salas_grupo: salasGrupoJson,
+            cant_estimada_alumnos: asig.cant,
+            cant_total_alumnos: nuevaCantTotal,
+            fecha_reserva: nuevaFecha,
+            hora_inicio: nuevaHoraInicio,
+            hora_fin: nuevaHoraFin,
+            tema_practica: nuevoTema,
+            tipo_reserva: nuevoTipo,
+            estado: nuevoEstado,
+            editada: nuevaEditada,
+            obs_resolucion: nuevaObsResolucion,
+            notificacion_docente: nuevaNotificacionDocente,
+          });
+        } else if (
+          i < asignacionesSecundarias.length &&
+          i >= secundariasExistentes.length
+        ) {
+          // Crear nueva secundaria
+          const asig = asignacionesSecundarias[i];
+          const nuevaSec = this.reservaRepository.create({
+            id_sala: asig.sala.id_sala,
+            codigo_docente: reserva.codigo_docente,
+            id_materia: reserva.id_materia,
+            fecha_reserva: nuevaFecha,
+            hora_inicio: nuevaHoraInicio,
+            hora_fin: nuevaHoraFin,
+            tema_practica: nuevoTema,
+            cant_estimada_alumnos: asig.cant,
+            cant_total_alumnos: nuevaCantTotal,
+            id_grupo_multisala: idGrupo,
+            salas_grupo: salasGrupoJson,
+            tipo_reserva: nuevoTipo,
+            estado: nuevoEstado,
+            editada: nuevaEditada,
+            obs_resolucion: nuevaObsResolucion,
+            notificacion_docente: nuevaNotificacionDocente,
+            id_usuario_administrador: reserva.id_usuario_administrador,
+          });
+          await this.reservaRepository.save(nuevaSec);
+        } else if (
+          i >= asignacionesSecundarias.length &&
+          i < secundariasExistentes.length
+        ) {
+          // Eliminar sobrante
+          await this.reservaRepository.delete(secundariasExistentes[i].id_reserva);
+        }
+      }
+    }
 
     // Auditoría
     await this.auditoriaService.registrar({
       id_usuario: currentUser?.id_usuario,
       correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
       tabla_afectada: 'reserva_sala',
-      id_registro_afectado: String(id_reserva),
+      id_registro_afectado: String(reserva.id_reserva),
       accion: 'UPDATE',
-      valores_anteriores: valoresAnteriores,
       valores_nuevos: {
-        id_sala: actualizada.id_sala,
-        fecha_reserva: actualizada.fecha_reserva,
-        hora_inicio: actualizada.hora_inicio,
-        hora_fin: actualizada.hora_fin,
-        editada: true,
-        estado: actualizada.estado,
+        id_sala: asignaciones[0].sala.id_sala,
+        ids_salas: idsSalasDeseadas,
+        fecha_reserva: nuevaFecha,
+        hora_inicio: nuevaHoraInicio,
+        hora_fin: nuevaHoraFin,
+        editada: nuevaEditada,
+        estado: nuevoEstado,
         obs_edicion: dto.obs_edicion,
       },
       ip_cliente: ip,
     });
 
-    // Emisión síncrona WebSocket
+    // Emisión WebSocket
     this.reservasGateway.emitirActualizacionReservas({
       accion: 'EDITADA',
-      id_reserva: actualizada.id_reserva,
-      id_sala: actualizada.id_sala,
-      estado: actualizada.estado,
-      editada: true,
+      id_reserva: reserva.id_reserva,
+      id_sala: asignaciones[0].sala.id_sala,
+      estado: nuevoEstado,
+      editada: nuevaEditada,
     });
 
-    return this.obtenerPorId(actualizada.id_reserva);
+    return this.obtenerPorId(reserva.id_reserva);
   }
 
   /**
@@ -547,78 +871,252 @@ export class ReservasService {
       );
     }
 
-    const datosAnteriores = {
-      estado: reserva.estado,
-      obs_resolucion: reserva.obs_resolucion,
-      id_usuario_administrador: reserva.id_usuario_administrador,
-      editada: reserva.editada,
-    };
+    const reservasGrupo = reserva.id_grupo_multisala
+      ? await this.reservaRepository.find({
+          where: { id_grupo_multisala: reserva.id_grupo_multisala },
+        })
+      : [reserva];
 
     if (dto.accion === AccionResolucionReserva.APROBAR) {
-      const validacion = await this.algoritmoService.validarDisponibilidad(
-        reserva.id_sala,
-        reserva.fecha_reserva,
-        reserva.hora_inicio,
-        reserva.hora_fin,
-        reserva.cant_estimada_alumnos,
-        reserva.id_reserva,
-        reserva.tipo_reserva,
-      );
-
-      if (!validacion.disponible) {
-        throw new ConflictException(
-          `Existe un conflicto horario insalvable con otra reserva aprobada: ${validacion.mensaje}`,
+      for (const r of reservasGrupo) {
+        const validacion = await this.algoritmoService.validarDisponibilidad(
+          r.id_sala,
+          r.fecha_reserva,
+          r.hora_inicio,
+          r.hora_fin,
+          r.cant_estimada_alumnos,
+          r.id_reserva,
+          r.tipo_reserva,
         );
+
+        if (!validacion.disponible) {
+          throw new ConflictException(
+            `Existe un conflicto horario insalvable en una de las salas: ${validacion.mensaje}`,
+          );
+        }
+
+        // Si es un examen con prioridad académica sobre una clase desplazable, desplazarla
+        if (
+          r.tipo_reserva === TipoReserva.EXAMEN &&
+          validacion.reservaConflicto &&
+          validacion.reservaConflicto.esDesplazable
+        ) {
+          const claseId = validacion.reservaConflicto.id_reserva;
+          await this.reservaRepository.update(claseId, {
+            estado: EstadoReserva.PENDIENTE,
+            notificacion_docente: `Su clase del día ${r.fecha_reserva} (${r.hora_inicio.slice(0, 5)}-${r.hora_fin.slice(0, 5)}) fue reprogramada por aplicación prioritaria de Examen.`,
+            editada: true,
+          });
+        }
       }
 
-      reserva.estado = EstadoReserva.APROBADA;
-      reserva.obs_resolucion = dto.obs_resolucion?.trim() || 'Aprobada por Jefatura';
-      reserva.editada = false; // Al dictaminar formalmente, se limpia la bandera de editada
+      for (const r of reservasGrupo) {
+        const datosAnteriores = {
+          estado: r.estado,
+          obs_resolucion: r.obs_resolucion,
+          id_usuario_administrador: r.id_usuario_administrador,
+          editada: r.editada,
+        };
+
+        r.estado = EstadoReserva.APROBADA;
+        r.obs_resolucion = dto.obs_resolucion?.trim() || 'Aprobada por Jefatura';
+        r.editada = false;
+        r.id_usuario_administrador = currentUser?.id_usuario;
+
+        const actualizada = await this.reservaRepository.save(r);
+
+        await this.auditoriaService.registrar({
+          id_usuario: currentUser?.id_usuario,
+          correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
+          tabla_afectada: 'reserva_sala',
+          id_registro_afectado: String(r.id_reserva),
+          accion: 'UPDATE',
+          valores_anteriores: datosAnteriores,
+          valores_nuevos: {
+            estado: actualizada.estado,
+            obs_resolucion: actualizada.obs_resolucion,
+            id_usuario_administrador: actualizada.id_usuario_administrador,
+            editada: false,
+          },
+          ip_cliente: ip,
+        });
+
+        this.reservasGateway.emitirActualizacionReservas({
+          accion: 'DICTAMINADA',
+          id_reserva: actualizada.id_reserva,
+          estado: actualizada.estado,
+          id_sala: actualizada.id_sala,
+        });
+      }
+
+      // Si se solicitó aprobación masiva para todas las clases recurrentes pendientes
+      if (dto.aprobar_todas_recurrentes && reserva.tipo_reserva === TipoReserva.CLASE) {
+        let otrasPendientes: ReservaSala[] = [];
+        if (reserva.id_lote_recurrente) {
+          otrasPendientes = await this.reservaRepository.find({
+            where: {
+              id_lote_recurrente: reserva.id_lote_recurrente,
+              estado: EstadoReserva.PENDIENTE,
+              tipo_reserva: TipoReserva.CLASE,
+            },
+          });
+        } else {
+          otrasPendientes = await this.reservaRepository.find({
+            where: {
+              codigo_docente: reserva.codigo_docente,
+              id_materia: reserva.id_materia,
+              tipo_reserva: TipoReserva.CLASE,
+              estado: EstadoReserva.PENDIENTE,
+            },
+          });
+        }
+
+        const idsGrupo = new Set(reservasGrupo.map((rg) => rg.id_reserva));
+        otrasPendientes = otrasPendientes.filter((op) => !idsGrupo.has(op.id_reserva));
+
+        for (const op of otrasPendientes) {
+          try {
+            const val = await this.algoritmoService.validarDisponibilidad(
+              op.id_sala,
+              op.fecha_reserva,
+              op.hora_inicio,
+              op.hora_fin,
+              op.cant_estimada_alumnos,
+              op.id_reserva,
+              op.tipo_reserva,
+            );
+
+            if (val.disponible) {
+              const prev = {
+                estado: op.estado,
+                obs_resolucion: op.obs_resolucion,
+                id_usuario_administrador: op.id_usuario_administrador,
+                editada: op.editada,
+              };
+
+              op.estado = EstadoReserva.APROBADA;
+              op.obs_resolucion = dto.obs_resolucion?.trim()
+                ? `${dto.obs_resolucion.trim()} (Aprobación en lote semestral)`
+                : 'Aprobación en lote de clases recurrentes';
+              op.editada = false;
+              op.id_usuario_administrador = currentUser?.id_usuario;
+
+              await this.reservaRepository.save(op);
+
+              await this.auditoriaService.registrar({
+                id_usuario: currentUser?.id_usuario,
+                correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
+                tabla_afectada: 'reserva_sala',
+                id_registro_afectado: String(op.id_reserva),
+                accion: 'UPDATE',
+                valores_anteriores: prev,
+                valores_nuevos: {
+                  estado: op.estado,
+                  obs_resolucion: op.obs_resolucion,
+                  id_usuario_administrador: op.id_usuario_administrador,
+                  editada: false,
+                },
+                ip_cliente: ip,
+              });
+
+              this.reservasGateway.emitirActualizacionReservas({
+                accion: 'DICTAMINADA',
+                id_reserva: op.id_reserva,
+                estado: op.estado,
+                id_sala: op.id_sala,
+              });
+            }
+          } catch (err: any) {
+            this.logger.warn(
+              `Omisión de aprobación automática para reserva #${op.id_reserva}: ${err?.message}`,
+            );
+          }
+        }
+      }
     } else {
       if (!dto.obs_resolucion || dto.obs_resolucion.trim() === '') {
         throw new BadRequestException(
           'Debe justificar obligatoriamente el motivo del rechazo de la solicitud',
         );
       }
-      reserva.estado = EstadoReserva.RECHAZADA;
-      reserva.obs_resolucion = dto.obs_resolucion.trim();
-      reserva.editada = false;
+
+      for (const r of reservasGrupo) {
+        const datosAnteriores = {
+          estado: r.estado,
+          obs_resolucion: r.obs_resolucion,
+          id_usuario_administrador: r.id_usuario_administrador,
+          editada: r.editada,
+        };
+
+        r.estado = EstadoReserva.RECHAZADA;
+        r.obs_resolucion = dto.obs_resolucion.trim();
+        r.editada = false;
+        r.id_usuario_administrador = currentUser?.id_usuario;
+
+        const actualizada = await this.reservaRepository.save(r);
+
+        await this.auditoriaService.registrar({
+          id_usuario: currentUser?.id_usuario,
+          correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
+          tabla_afectada: 'reserva_sala',
+          id_registro_afectado: String(r.id_reserva),
+          accion: 'UPDATE',
+          valores_anteriores: datosAnteriores,
+          valores_nuevos: {
+            estado: actualizada.estado,
+            obs_resolucion: actualizada.obs_resolucion,
+            id_usuario_administrador: actualizada.id_usuario_administrador,
+            editada: false,
+          },
+          ip_cliente: ip,
+        });
+
+        this.reservasGateway.emitirActualizacionReservas({
+          accion: 'DICTAMINADA',
+          id_reserva: actualizada.id_reserva,
+          estado: actualizada.estado,
+          id_sala: actualizada.id_sala,
+        });
+      }
     }
 
-    reserva.id_usuario_administrador = currentUser?.id_usuario;
-
-    const actualizada = await this.reservaRepository.save(reserva);
-
-    // Auditoría forense
-    await this.auditoriaService.registrar({
-      id_usuario: currentUser?.id_usuario,
-      correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
-      tabla_afectada: 'reserva_sala',
-      id_registro_afectado: String(id_reserva),
-      accion: 'UPDATE',
-      valores_anteriores: datosAnteriores,
-      valores_nuevos: {
-        estado: actualizada.estado,
-        obs_resolucion: actualizada.obs_resolucion,
-        id_usuario_administrador: actualizada.id_usuario_administrador,
-        editada: false,
-      },
-      ip_cliente: ip,
-    });
-
-    // Emisión síncrona WebSocket
-    this.reservasGateway.emitirActualizacionReservas({
-      accion: 'DICTAMINADA',
-      id_reserva: actualizada.id_reserva,
-      estado: actualizada.estado,
-      id_sala: actualizada.id_sala,
-    });
-
-    return this.obtenerPorId(actualizada.id_reserva);
+    return this.obtenerPorId(reserva.id_reserva);
   }
 
   /**
-   * CU19: Cancelar reserva de aula (Exclusivo de docente titular)
+   * Marcar aviso de modificación o notificación de reserva como leído
+   */
+  async marcarLeida(
+    id_reserva: number,
+    currentUser: any,
+    ip: string,
+  ): Promise<ReservaSala> {
+    const reserva = await this.obtenerPorId(id_reserva);
+    const idGrupo = reserva.id_grupo_multisala;
+
+    if (idGrupo) {
+      await this.reservaRepository.update(
+        { id_grupo_multisala: idGrupo },
+        { editada: false, notificacion_docente: null },
+      );
+    } else {
+      await this.reservaRepository.update(id_reserva, {
+        editada: false,
+        notificacion_docente: null,
+      });
+    }
+
+    this.reservasGateway.emitirActualizacionReservas({
+      accion: 'LEIDA',
+      id_reserva: reserva.id_reserva,
+      id_sala: reserva.id_sala,
+    });
+
+    return this.obtenerPorId(id_reserva);
+  }
+
+  /**
+   * CU19: Cancelar reserva de aula (Docente titular o Administrador)
    */
   async cancelar(
     id_reserva: number,
@@ -640,49 +1138,57 @@ export class ReservasService {
     const roles: string[] = currentUser?.roles || [];
     const esAdmin = roles.includes('ADMINISTRADOR');
 
-    // Validación de pertenencia: Solo el docente titular puede cancelar su reserva
+    // Validación de pertenencia: Solo el docente titular o administrador puede cancelar
     if (!esAdmin && Number(reserva.docente.id_usuario) !== Number(currentUser?.id_usuario)) {
       throw new ForbiddenException(
-        'Solo el docente titular de la solicitud puede cancelar su reserva',
+        'Solo el docente titular de la solicitud o un Administrador pueden cancelar la reserva',
       );
     }
 
-    const datosAnteriores = {
-      estado: reserva.estado,
-      obs_resolucion: reserva.obs_resolucion,
-    };
+    const reservasGrupo = reserva.id_grupo_multisala
+      ? await this.reservaRepository.find({
+          where: { id_grupo_multisala: reserva.id_grupo_multisala },
+        })
+      : [reserva];
 
-    reserva.estado = EstadoReserva.CANCELADA;
-    const notaCancelacion = `Cancelada por el docente titular: ${motivo ? motivo.trim() : 'Sin motivo especificado'}`;
-    reserva.obs_resolucion = reserva.obs_resolucion
-      ? `${reserva.obs_resolucion} | ${notaCancelacion}`
-      : notaCancelacion;
+    const actor = esAdmin ? 'el Administrador' : 'el docente titular';
+    const notaCancelacion = `Cancelada por ${actor}: ${motivo ? motivo.trim() : 'Sin motivo especificado'}`;
 
-    const actualizada = await this.reservaRepository.save(reserva);
+    for (const r of reservasGrupo) {
+      const datosAnteriores = {
+        estado: r.estado,
+        obs_resolucion: r.obs_resolucion,
+      };
 
-    // Auditoría forense
-    await this.auditoriaService.registrar({
-      id_usuario: currentUser?.id_usuario,
-      correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
-      tabla_afectada: 'reserva_sala',
-      id_registro_afectado: String(id_reserva),
-      accion: 'UPDATE',
-      valores_anteriores: datosAnteriores,
-      valores_nuevos: {
-        estado: actualizada.estado,
-        obs_resolucion: actualizada.obs_resolucion,
-      },
-      ip_cliente: ip,
-    });
+      r.estado = EstadoReserva.CANCELADA;
+      r.obs_resolucion = r.obs_resolucion
+        ? `${r.obs_resolucion} | ${notaCancelacion}`
+        : notaCancelacion;
 
-    // Emisión síncrona WebSocket
-    this.reservasGateway.emitirActualizacionReservas({
-      accion: 'CANCELADA',
-      id_reserva: actualizada.id_reserva,
-      id_sala: actualizada.id_sala,
-      estado: EstadoReserva.CANCELADA,
-    });
+      const actualizada = await this.reservaRepository.save(r);
 
-    return this.obtenerPorId(actualizada.id_reserva);
+      await this.auditoriaService.registrar({
+        id_usuario: currentUser?.id_usuario,
+        correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
+        tabla_afectada: 'reserva_sala',
+        id_registro_afectado: String(r.id_reserva),
+        accion: 'UPDATE',
+        valores_anteriores: datosAnteriores,
+        valores_nuevos: {
+          estado: actualizada.estado,
+          obs_resolucion: actualizada.obs_resolucion,
+        },
+        ip_cliente: ip,
+      });
+
+      this.reservasGateway.emitirActualizacionReservas({
+        accion: 'CANCELADA',
+        id_reserva: actualizada.id_reserva,
+        id_sala: actualizada.id_sala,
+        estado: EstadoReserva.CANCELADA,
+      });
+    }
+
+    return this.obtenerPorId(reserva.id_reserva);
   }
 }

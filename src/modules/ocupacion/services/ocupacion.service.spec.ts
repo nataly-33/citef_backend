@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { OcupacionService } from './ocupacion.service';
 import { OcupacionGateway } from '../gateways/ocupacion.gateway';
+import { ReservasGateway } from '../../reservas/gateways/reservas.gateway';
 import { AuditoriaService } from '../../auditoria/auditoria.service';
 import { ColasEsperaService } from './colas-espera.service';
 import { DataSource } from 'typeorm';
@@ -101,9 +102,20 @@ describe('OcupacionService (CU12, CU13, CU14: Ocupación en Tiempo Real)', () =>
         { provide: 'AsignacionSesionRepository', useValue: mockSesionRepo },
         { provide: 'ColaEsperaSalaRepository', useValue: mockColaRepo },
         { provide: 'MotivoUsoRepository', useValue: mockMotivoRepo },
+        {
+          provide: 'ReservaSalaRepository',
+          useValue: { findOne: jest.fn(), save: jest.fn() },
+        },
         { provide: OcupacionGateway, useValue: mockGateway },
         { provide: AuditoriaService, useValue: mockAuditoriaService },
         { provide: ColasEsperaService, useValue: mockColasEsperaService },
+        {
+          provide: ReservasGateway,
+          useValue: {
+            emitirActualizacionReservas: jest.fn(),
+            emitirActualizacion: jest.fn(),
+          },
+        },
         { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();

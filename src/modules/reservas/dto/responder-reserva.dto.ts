@@ -1,5 +1,5 @@
-import { IsEnum, IsString, IsOptional, MaxLength } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsEnum, IsString, IsOptional, MaxLength, IsBoolean } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export enum AccionResolucionReserva {
   APROBAR = 'APROBAR',
@@ -26,4 +26,12 @@ export class ResponderReservaDto {
   @IsString({ message: 'El dictamen u observación debe ser texto' })
   @MaxLength(255, { message: 'El dictamen no puede superar los 255 caracteres' })
   obs_resolucion?: string;
+
+  @ApiPropertyOptional({
+    description: 'Si es true y la reserva es de tipo CLASE, aprueba en lote todas las clases recurrentes pendientes del semestre',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'aprobar_todas_recurrentes debe ser un valor booleano' })
+  aprobar_todas_recurrentes?: boolean;
 }

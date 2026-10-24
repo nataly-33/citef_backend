@@ -46,7 +46,7 @@ export class AlgoritmoDisponibilidadService {
     hora_inicio: string,
     hora_fin: string,
     cant_estimada_alumnos?: number,
-    excluirIdReserva?: number,
+    excluirIdReserva?: number | number[],
     tipo_reserva?: TipoReserva,
     validarCapacidad: boolean = true,
   ): Promise<ResultadoValidacionDisponibilidad> {
@@ -111,10 +111,18 @@ export class AlgoritmoDisponibilidadService {
         hora_fin,
       });
 
-    if (excluirIdReserva) {
-      qb.andWhere('reserva.id_reserva != :excluirIdReserva', {
-        excluirIdReserva,
-      });
+    if (excluirIdReserva !== undefined && excluirIdReserva !== null) {
+      if (Array.isArray(excluirIdReserva)) {
+        if (excluirIdReserva.length > 0) {
+          qb.andWhere('reserva.id_reserva NOT IN (:...excluirIds)', {
+            excluirIds: excluirIdReserva,
+          });
+        }
+      } else {
+        qb.andWhere('reserva.id_reserva != :excluirIdReserva', {
+          excluirIdReserva,
+        });
+      }
     }
 
     const colisionAprobada = await qb.getOne();

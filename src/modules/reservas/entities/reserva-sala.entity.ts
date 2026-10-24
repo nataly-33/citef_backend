@@ -101,6 +101,21 @@ export class ReservaSala {
   @Column({ type: 'varchar', length: 50, nullable: true, name: 'id_lote_recurrente' })
   id_lote_recurrente: string | null;
 
+  @Column({ type: 'varchar', length: 50, nullable: true, name: 'id_grupo_multisala' })
+  id_grupo_multisala: string | null;
+
+  @Column({ type: 'smallint', nullable: true, name: 'cant_total_alumnos' })
+  cant_total_alumnos: number | null;
+
+  @Column({ type: 'jsonb', nullable: true, name: 'salas_grupo' })
+  salas_grupo: Array<{
+    id_sala: number;
+    codigo_sala: string;
+    nombre: string;
+    capacidad: number;
+    cant_asignada: number;
+  }> | null;
+
   @Column({ name: 'obs_resolucion', type: 'text', nullable: true })
   obs_resolucion: string | null;
 

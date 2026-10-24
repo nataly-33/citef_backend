@@ -18,6 +18,11 @@ export class SolicitarReservaDto {
   @Min(1, { message: 'El ID de la sala no es válido' })
   id_sala: number;
 
+  @ApiPropertyOptional({ description: 'IDs de salas combinadas para solicitudes multi-sala (>30 alumnos)', example: [1, 2] })
+  @IsOptional()
+  @IsArray({ message: 'Las salas seleccionadas deben ser un arreglo de IDs' })
+  ids_salas?: number[];
+
   @ApiProperty({ description: 'Código institucional del docente solicitante', example: 'DOC-1001' })
   @IsString({ message: 'El código del docente debe ser texto' })
   @IsNotEmpty({ message: 'El código del docente es obligatorio' })

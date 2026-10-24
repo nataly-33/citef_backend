@@ -8,7 +8,9 @@ import { LaboratorioSala } from '../infraestructura/entities/laboratorio-sala.en
 import { Computadora } from '../infraestructura/entities/computadora.entity';
 import { MotivoUso } from '../catalogos/entities/motivo-uso.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
+import { ReservaSala } from '../reservas/entities/reserva-sala.entity';
 import { AuditoriaModule } from '../auditoria/auditoria.module';
+import { ReservasModule } from '../reservas/reservas.module';
 
 import { OcupacionGateway } from './gateways/ocupacion.gateway';
 import { OcupacionService } from './services/ocupacion.service';
@@ -30,8 +32,10 @@ import { AsistenciasController } from './controllers/asistencias.controller';
       Computadora,
       MotivoUso,
       Usuario,
+      ReservaSala,
     ]),
     AuditoriaModule,
+    ReservasModule,
   ],
   controllers: [OcupacionController, AsistenciasController],
   providers: [

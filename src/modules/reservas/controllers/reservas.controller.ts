@@ -148,6 +148,19 @@ export class ReservasController {
     return this.reservasService.gestionar(id, dto, user, ip);
   }
 
+  @Patch(':id/marcar-leida')
+  @Permisos('RESERVAS_CONSULTAR', 'RESERVAS_SOLICITAR', 'RESERVAS_GESTIONAR')
+  @ApiOperation({
+    summary: 'Marcar notificación o modificación de reserva como leída/revisada',
+  })
+  marcarLeida(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: any,
+    @Ip() ip: string,
+  ) {
+    return this.reservasService.marcarLeida(id, user, ip);
+  }
+
   @Patch(':id/cancelar')
   @Permisos('RESERVAS_CANCELAR')
   @ApiOperation({

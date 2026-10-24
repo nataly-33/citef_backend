@@ -18,6 +18,9 @@ describe('ReservasService', () => {
     create: jest.fn(),
     save: jest.fn(),
     findOne: jest.fn(),
+    find: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
     createQueryBuilder: jest.fn(),
   };
 
@@ -31,6 +34,9 @@ describe('ReservasService', () => {
 
   const mockSalaRepo = {
     findOne: jest.fn(),
+    find: jest.fn().mockResolvedValue([
+      { id_sala: 1, codigo_sala: 'LAB-1', nombre: 'Sala 1', cant_estudiantes: 30, activo: true, estado_operativo: 'OPERATIVA' },
+    ]),
   };
 
   const mockAlgoritmoService = {
@@ -156,6 +162,58 @@ describe('ReservasService', () => {
     expect(mockAuditoriaService.registrar).toHaveBeenCalled();
   });
 
+  it('debe aprobar en lote todas las clases recurrentes pendientes del semestre', async () => {
+    const clasePrincipal = {
+      id_reserva: 1,
+      id_sala: 1,
+      fecha_reserva: '2029-10-25',
+      hora_inicio: '08:00',
+      hora_fin: '10:00',
+      cant_estimada_alumnos: 25,
+      estado: EstadoReserva.PENDIENTE,
+      tipo_reserva: 'CLASE',
+      codigo_docente: 'DOC-1001',
+      id_materia: 10,
+      id_lote_recurrente: 'SEM_123',
+    };
+
+    const claseRecurrente2 = {
+      id_reserva: 2,
+      id_sala: 1,
+      fecha_reserva: '2029-11-01',
+      hora_inicio: '08:00',
+      hora_fin: '10:00',
+      cant_estimada_alumnos: 25,
+      estado: EstadoReserva.PENDIENTE,
+      tipo_reserva: 'CLASE',
+      codigo_docente: 'DOC-1001',
+      id_materia: 10,
+      id_lote_recurrente: 'SEM_123',
+    };
+
+    mockReservaRepo.findOne.mockResolvedValue({ ...clasePrincipal });
+    mockReservaRepo.find.mockResolvedValue([claseRecurrente2]);
+    mockAlgoritmoService.validarDisponibilidad.mockResolvedValue({
+      disponible: true,
+      mensaje: 'Disponible',
+    });
+    mockReservaRepo.save.mockImplementation((entity) => Promise.resolve(entity));
+
+    const res = await service.gestionar(
+      1,
+      {
+        accion: AccionResolucionReserva.APROBAR,
+        obs_resolucion: 'Aprobación semestral',
+        aprobar_todas_recurrentes: true,
+      },
+      { id_usuario: 1, roles: ['ADMINISTRADOR'] },
+      '127.0.0.1',
+    );
+
+    expect(res.estado).toBe(EstadoReserva.APROBADA);
+    expect(mockReservaRepo.save).toHaveBeenCalledTimes(2); // Principal + Recurrente 2
+  });
+
   it('debe rechazar la aprobación si se detecta colisión horaria insalvable', async () => {
     const reservaPendiente = {
       id_reserva: 1,
@@ -181,5 +239,52 @@ describe('ReservasService', () => {
         '127.0.0.1',
       ),
     ).rejects.toThrow(ConflictException);
+  });
+
+  it('debe editar la sala de una reserva actualizando id_sala en BD (ej: reasignar a LAB-46)', async () => {
+    const reservaOriginal = {
+      id_reserva: 10,
+      id_sala: 1,
+      fecha_reserva: '2029-10-25',
+      hora_inicio: '08:00',
+      hora_fin: '10:00',
+      cant_estimada_alumnos: 10,
+      tema_practica: 'Práctica de Redes',
+      tipo_reserva: 'CLASE',
+      estado: EstadoReserva.PENDIENTE,
+      docente: { id_usuario: 5, codigo: 'DOC-1001' },
+      id_grupo_multisala: null,
+    };
+
+    mockReservaRepo.findOne
+      .mockResolvedValueOnce(reservaOriginal) // primera llamada en editar()
+      .mockResolvedValueOnce({ ...reservaOriginal, id_sala: 3 }); // llamada en obtenerPorId()
+
+    mockSalaRepo.find.mockResolvedValueOnce([
+      { id_sala: 3, codigo_sala: 'LAB-46', nombre: 'Sala 46', cant_estudiantes: 10, activo: true, estado_operativo: 'OPERATIVA' },
+    ]);
+
+    mockAlgoritmoService.validarDisponibilidad.mockResolvedValue({
+      disponible: true,
+      mensaje: 'Disponible',
+    });
+
+    mockReservaRepo.update.mockResolvedValue({ affected: 1 });
+
+    const resultado = await service.editar(
+      10,
+      { id_sala: 3, cant_estimada_alumnos: 10 },
+      { id_usuario: 1, roles: ['ADMINISTRADOR'] },
+      '127.0.0.1',
+    );
+
+    expect(mockReservaRepo.update).toHaveBeenCalledWith(
+      10,
+      expect.objectContaining({
+        id_sala: 3,
+        id_grupo_multisala: null,
+      }),
+    );
+    expect(resultado.id_sala).toBe(3);
   });
 });

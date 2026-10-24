@@ -6,6 +6,7 @@ import {
   MaxLength,
   IsOptional,
   IsEnum,
+  IsArray,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { TipoReserva } from '../entities/reserva-sala.entity';
@@ -16,6 +17,11 @@ export class EditarReservaDto {
   @IsInt({ message: 'El ID de la sala debe ser un número entero' })
   @Min(1, { message: 'El ID de la sala no es válido' })
   id_sala?: number;
+
+  @ApiPropertyOptional({ description: 'IDs de salas combinadas si se actualiza asignación multi-sala' })
+  @IsOptional()
+  @IsArray({ message: 'Las salas seleccionadas deben ser un arreglo de IDs' })
+  ids_salas?: number[];
 
   @ApiPropertyOptional({ description: 'Fecha de la reserva (YYYY-MM-DD)' })
   @IsOptional()
