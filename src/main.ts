@@ -39,7 +39,8 @@ async function bootstrap() {
         scheme: 'bearer',
         bearerFormat: 'JWT',
         name: 'JWT',
-        description: 'Ingrese el token JWT obtenido del endpoint /api/v1/auth/login',
+        description:
+          'Ingrese el token JWT obtenido del endpoint /api/v1/auth/login',
         in: 'header',
       },
       'JWT-auth', // default security name
@@ -56,7 +57,11 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
-  logger.log(` Servidor CITEF Backend corriendo en: http://localhost:${port}/api/v1`);
-  logger.log(` Documentación Swagger disponible en: http://localhost:${port}/api/docs`);
+  logger.log(
+    ` Servidor CITEF Backend corriendo en: http://localhost:${port}/api/v1`,
+  );
+  logger.log(
+    ` Documentación Swagger disponible en: http://localhost:${port}/api/docs`,
+  );
 }
 bootstrap();
