@@ -33,13 +33,12 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 @Permisos('CAT_ASIGNAR_TURNOS')
 @Controller('turnos-auxiliares')
 export class TurnosAuxiliaresController {
-  constructor(
-    private readonly turnosService: TurnosAuxiliaresService,
-  ) {}
+  constructor(private readonly turnosService: TurnosAuxiliaresService) {}
 
   @Get('auxiliares-disponibles')
   @ApiOperation({
-    summary: 'CU8: Listar usuarios con rol AUXILIAR disponibles para asignación de turnos',
+    summary:
+      'CU8: Listar usuarios con rol AUXILIAR disponibles para asignación de turnos',
   })
   @ApiResponse({
     status: 200,
@@ -51,7 +50,8 @@ export class TurnosAuxiliaresController {
 
   @Get('franjas-horarias')
   @ApiOperation({
-    summary: 'CU8: Listar franjas horarias operativas activas para selectores de asignación',
+    summary:
+      'CU8: Listar franjas horarias operativas activas para selectores de asignación',
   })
   @ApiResponse({
     status: 200,
@@ -63,7 +63,8 @@ export class TurnosAuxiliaresController {
 
   @Get()
   @ApiOperation({
-    summary: 'CU8: Listar asignaciones semestrales de turnos con paginación de 15 filas',
+    summary:
+      'CU8: Listar asignaciones semestrales de turnos con paginación de 15 filas',
   })
   @ApiQuery({ name: 'pagina', required: false, type: Number })
   @ApiQuery({ name: 'limite', required: false, type: Number })
@@ -95,14 +96,17 @@ export class TurnosAuxiliaresController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'CU8: Obtener detalle de asignación de turno por ID' })
+  @ApiOperation({
+    summary: 'CU8: Obtener detalle de asignación de turno por ID',
+  })
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.turnosService.findOne(id);
   }
 
   @Post()
   @ApiOperation({
-    summary: 'CU8: Asignar turno semestral fijo a un auxiliar (con validación de rol y no superposición)',
+    summary:
+      'CU8: Asignar turno semestral fijo a un auxiliar (con validación de rol y no superposición)',
   })
   @ApiResponse({ status: 201, description: 'Turno asignado exitosamente' })
   asignarTurno(
@@ -114,7 +118,9 @@ export class TurnosAuxiliaresController {
   }
 
   @Put(':id')
-  @ApiOperation({ summary: 'CU8: Modificar horario o periodo de un turno asignado' })
+  @ApiOperation({
+    summary: 'CU8: Modificar horario o periodo de un turno asignado',
+  })
   actualizar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ActualizarTurnoDto,
@@ -125,7 +131,9 @@ export class TurnosAuxiliaresController {
   }
 
   @Patch(':id/estado')
-  @ApiOperation({ summary: 'CU8: Cambiar estado activo/inactivo de una asignación' })
+  @ApiOperation({
+    summary: 'CU8: Cambiar estado activo/inactivo de una asignación',
+  })
   cambiarEstado(
     @Param('id', ParseIntPipe) id: number,
     @Body('activo') activo: boolean,
@@ -153,13 +161,12 @@ export class TurnosAuxiliaresController {
 @Permisos('CAT_ASIGNAR_TURNOS')
 @Controller('auxiliares-disponibles')
 export class AuxiliaresDisponiblesController {
-  constructor(
-    private readonly turnosService: TurnosAuxiliaresService,
-  ) {}
+  constructor(private readonly turnosService: TurnosAuxiliaresService) {}
 
   @Get()
   @ApiOperation({
-    summary: 'CU8: Listar usuarios con rol AUXILIAR (ruta directa /api/v1/auxiliares-disponibles)',
+    summary:
+      'CU8: Listar usuarios con rol AUXILIAR (ruta directa /api/v1/auxiliares-disponibles)',
   })
   listarAuxiliares() {
     return this.turnosService.listarAuxiliaresDisponibles();

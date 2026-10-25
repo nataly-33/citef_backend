@@ -35,11 +35,15 @@ export class CarreraMateria {
   @UpdateDateColumn({ type: 'timestamp' })
   actualizado_en: Date;
 
-  @ManyToOne(() => Carrera, (c) => c.carreras_materias, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => Carrera, (c) => c.carreras_materias, {
+    onDelete: 'RESTRICT',
+  })
   @JoinColumn({ name: 'id_carrera' })
   carrera: Carrera;
 
-  @ManyToOne(() => Materia, (m) => m.carreras_materias, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => Materia, (m) => m.carreras_materias, {
+    onDelete: 'RESTRICT',
+  })
   @JoinColumn({ name: 'id_materia' })
   materia: Materia;
 }

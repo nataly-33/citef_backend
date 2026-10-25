@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { TurnosAuxiliaresService } from './turnos-auxiliares.service';
 import { AuditoriaService } from '../../auditoria/auditoria.service';
 
@@ -14,7 +18,9 @@ describe('TurnosAuxiliaresService (CU8: Asignación de Turnos a Auxiliares)', ()
     mockTurnoRepo = {
       findOne: jest.fn(),
       find: jest.fn(),
-      create: jest.fn().mockImplementation((dto) => ({ id_asignacion_turno: 1, ...dto })),
+      create: jest
+        .fn()
+        .mockImplementation((dto) => ({ id_asignacion_turno: 1, ...dto })),
       save: jest.fn().mockImplementation((t) => Promise.resolve(t)),
       createQueryBuilder: jest.fn().mockReturnValue({
         leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -103,7 +109,9 @@ describe('TurnosAuxiliaresService (CU8: Asignación de Turnos a Auxiliares)', ()
       fecha_fin: '2026-07-31',
     };
 
-    await expect(service.asignarTurno(dto)).rejects.toThrow(BadRequestException);
+    await expect(service.asignarTurno(dto)).rejects.toThrow(
+      BadRequestException,
+    );
   });
 
   it('debe asignar turno exitosamente a un usuario con rol AUXILIAR', async () => {
@@ -132,10 +140,17 @@ describe('TurnosAuxiliaresService (CU8: Asignación de Turnos a Auxiliares)', ()
       fecha_fin: '2026-07-31',
     };
 
-    const res = await service.asignarTurno(dto, { id_usuario: 1, correo: 'admin@uagrm.edu.bo' }, '127.0.0.1');
+    const res = await service.asignarTurno(
+      dto,
+      { id_usuario: 1, correo: 'admin@uagrm.edu.bo' },
+      '127.0.0.1',
+    );
     expect(res.id_asignacion_turno).toBe(1);
     expect(mockAuditoriaService.registrar).toHaveBeenCalledWith(
-      expect.objectContaining({ accion: 'INSERT', tabla_afectada: 'asignar_turno' }),
+      expect.objectContaining({
+        accion: 'INSERT',
+        tabla_afectada: 'asignar_turno',
+      }),
     );
   });
 

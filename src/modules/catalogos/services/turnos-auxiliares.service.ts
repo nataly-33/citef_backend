@@ -125,7 +125,7 @@ export class TurnosAuxiliaresService {
     const sanitized = items.map((item) => {
       if (item.usuario) {
         const { password_hash, ...uRest } = item.usuario as any;
-        item.usuario = uRest as any;
+        item.usuario = uRest;
       }
       return item;
     });
@@ -153,7 +153,7 @@ export class TurnosAuxiliaresService {
 
     if (turno.usuario) {
       const { password_hash, ...uRest } = turno.usuario as any;
-      turno.usuario = uRest as any;
+      turno.usuario = uRest;
     }
 
     return turno;

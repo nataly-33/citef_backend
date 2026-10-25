@@ -19,7 +19,8 @@ export class ActualizarHorarioDto {
 
   @ApiPropertyOptional({
     example: '07:00:00',
-    description: 'Hora de inicio de la franja horaria (formato HH:mm:ss o HH:mm)',
+    description:
+      'Hora de inicio de la franja horaria (formato HH:mm:ss o HH:mm)',
   })
   @IsOptional()
   @IsString({ message: 'La hora de inicio debe ser una cadena de texto' })
@@ -30,7 +31,8 @@ export class ActualizarHorarioDto {
 
   @ApiPropertyOptional({
     example: '12:00:00',
-    description: 'Hora de finalización de la franja horaria (formato HH:mm:ss o HH:mm)',
+    description:
+      'Hora de finalización de la franja horaria (formato HH:mm:ss o HH:mm)',
   })
   @IsOptional()
   @IsString({ message: 'La hora de fin debe ser una cadena de texto' })

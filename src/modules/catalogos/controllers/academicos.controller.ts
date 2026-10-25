@@ -56,14 +56,18 @@ export class AcademicosController {
     'RESERVAS_GESTIONAR',
   )
   @ApiOperation({
-    summary: 'CU5: Listar carreras académicas con paginación de 15 filas y búsqueda',
+    summary:
+      'CU5: Listar carreras académicas con paginación de 15 filas y búsqueda',
   })
   @ApiQuery({ name: 'pagina', required: false, type: Number })
   @ApiQuery({ name: 'limite', required: false, type: Number })
   @ApiQuery({ name: 'busqueda', required: false, type: String })
   @ApiQuery({ name: 'activo', required: false, type: Boolean })
   @ApiQuery({ name: 'todos', required: false, type: Boolean })
-  @ApiResponse({ status: 200, description: 'Listado de carreras obtenido exitosamente' })
+  @ApiResponse({
+    status: 200,
+    description: 'Listado de carreras obtenido exitosamente',
+  })
   findAllCarreras(
     @Query('pagina') pagina?: number,
     @Query('limite') limite?: number,
@@ -91,7 +95,9 @@ export class AcademicosController {
     'TIEMPOREAL_MONITOREAR',
     'TIEMPOREAL_ASISTENCIAS',
   )
-  @ApiOperation({ summary: 'CU5: Obtener todas las carreras activas para selectores' })
+  @ApiOperation({
+    summary: 'CU5: Obtener todas las carreras activas para selectores',
+  })
   findAllCarrerasDropdown() {
     return this.carrerasService.findAll({ todos: true, activo: true });
   }
@@ -103,7 +109,9 @@ export class AcademicosController {
     'TIEMPOREAL_MONITOREAR',
     'TIEMPOREAL_ASISTENCIAS',
   )
-  @ApiOperation({ summary: 'CU5: Obtener detalle de carrera por ID con sus materias' })
+  @ApiOperation({
+    summary: 'CU5: Obtener detalle de carrera por ID con sus materias',
+  })
   findOneCarrera(@Param('id', ParseIntPipe) id: number) {
     return this.carrerasService.findOne(id);
   }
@@ -131,7 +139,9 @@ export class AcademicosController {
   }
 
   @Patch('carreras/:id/estado')
-  @ApiOperation({ summary: 'CU5: Cambiar estado activo/inactivo de una carrera' })
+  @ApiOperation({
+    summary: 'CU5: Cambiar estado activo/inactivo de una carrera',
+  })
   cambiarEstadoCarrera(
     @Param('id', ParseIntPipe) id: number,
     @Body('activo') activo: boolean,
@@ -166,7 +176,8 @@ export class AcademicosController {
     'RESERVAS_GESTIONAR',
   )
   @ApiOperation({
-    summary: 'CU5: Listar materias con filtro por carrera, semestre y paginación',
+    summary:
+      'CU5: Listar materias con filtro por carrera, semestre y paginación',
   })
   @ApiQuery({ name: 'pagina', required: false, type: Number })
   @ApiQuery({ name: 'limite', required: false, type: Number })
@@ -176,7 +187,10 @@ export class AcademicosController {
   @ApiQuery({ name: 'busqueda', required: false, type: String })
   @ApiQuery({ name: 'activo', required: false, type: Boolean })
   @ApiQuery({ name: 'todos', required: false, type: Boolean })
-  @ApiResponse({ status: 200, description: 'Listado de materias obtenido exitosamente' })
+  @ApiResponse({
+    status: 200,
+    description: 'Listado de materias obtenido exitosamente',
+  })
   findAllMaterias(
     @Query('pagina') pagina?: number,
     @Query('limite') limite?: number,
@@ -193,9 +207,11 @@ export class AcademicosController {
     const sem =
       semestre !== undefined && semestre !== null && String(semestre) !== ''
         ? Number(semestre)
-        : semestreNivel !== undefined && semestreNivel !== null && String(semestreNivel) !== ''
-        ? Number(semestreNivel)
-        : undefined;
+        : semestreNivel !== undefined &&
+            semestreNivel !== null &&
+            String(semestreNivel) !== ''
+          ? Number(semestreNivel)
+          : undefined;
 
     return this.materiasService.findAll({
       pagina: pagina ? Number(pagina) : 1,
@@ -215,7 +231,9 @@ export class AcademicosController {
     'TIEMPOREAL_MONITOREAR',
     'TIEMPOREAL_ASISTENCIAS',
   )
-  @ApiOperation({ summary: 'CU5: Obtener todas las materias activas para selectores' })
+  @ApiOperation({
+    summary: 'CU5: Obtener todas las materias activas para selectores',
+  })
   findAllMateriasDropdown() {
     return this.materiasService.findAll({ todos: true, activo: true });
   }
@@ -255,7 +273,9 @@ export class AcademicosController {
   }
 
   @Patch('materias/:id/estado')
-  @ApiOperation({ summary: 'CU5: Cambiar estado activo/inactivo de una materia' })
+  @ApiOperation({
+    summary: 'CU5: Cambiar estado activo/inactivo de una materia',
+  })
   cambiarEstadoMateria(
     @Param('id', ParseIntPipe) id: number,
     @Body('activo') activo: boolean,

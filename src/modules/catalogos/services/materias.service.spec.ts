@@ -13,7 +13,9 @@ describe('MateriasService (CU5: Gestión de Materias)', () => {
     mockMateriaRepo = {
       findOne: jest.fn(),
       find: jest.fn(),
-      create: jest.fn().mockImplementation((dto) => ({ id_materia: 10, ...dto })),
+      create: jest
+        .fn()
+        .mockImplementation((dto) => ({ id_materia: 10, ...dto })),
       save: jest.fn().mockImplementation((m) => Promise.resolve(m)),
       createQueryBuilder: jest.fn().mockReturnValue({
         leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -63,7 +65,10 @@ describe('MateriasService (CU5: Gestión de Materias)', () => {
         MateriasService,
         { provide: 'MateriaRepository', useValue: mockMateriaRepo },
         { provide: 'CarreraRepository', useValue: mockCarreraRepo },
-        { provide: 'CarreraMateriaRepository', useValue: mockCarreraMateriaRepo },
+        {
+          provide: 'CarreraMateriaRepository',
+          useValue: mockCarreraMateriaRepo,
+        },
         { provide: AuditoriaService, useValue: mockAuditoriaService },
       ],
     }).compile();
@@ -93,7 +98,11 @@ describe('MateriasService (CU5: Gestión de Materias)', () => {
       id_carrera: 1,
     };
 
-    const res = await service.crear(dto, { id_usuario: 1, correo: 'admin@uagrm.edu.bo' }, '127.0.0.1');
+    const res = await service.crear(
+      dto,
+      { id_usuario: 1, correo: 'admin@uagrm.edu.bo' },
+      '127.0.0.1',
+    );
     expect(res.sigla).toBe('MAT101');
     expect(mockAuditoriaService.registrar).toHaveBeenCalledWith(
       expect.objectContaining({ accion: 'INSERT', tabla_afectada: 'materia' }),

@@ -12,7 +12,9 @@ describe('CarrerasService (CU5: Gestión de Carreras)', () => {
     mockCarreraRepo = {
       findOne: jest.fn(),
       find: jest.fn(),
-      create: jest.fn().mockImplementation((dto) => ({ id_carrera: 1, ...dto })),
+      create: jest
+        .fn()
+        .mockImplementation((dto) => ({ id_carrera: 1, ...dto })),
       save: jest.fn().mockImplementation((c) => Promise.resolve(c)),
       createQueryBuilder: jest.fn().mockReturnValue({
         leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -22,12 +24,22 @@ describe('CarrerasService (CU5: Gestión de Carreras)', () => {
         andWhere: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn().mockResolvedValue([
           [
-            { id_carrera: 1, codigo: '186-5', nombre: 'Ingeniería Comercial', activo: true },
+            {
+              id_carrera: 1,
+              codigo: '186-5',
+              nombre: 'Ingeniería Comercial',
+              activo: true,
+            },
           ],
           1,
         ]),
         getMany: jest.fn().mockResolvedValue([
-          { id_carrera: 1, codigo: '186-5', nombre: 'Ingeniería Comercial', activo: true },
+          {
+            id_carrera: 1,
+            codigo: '186-5',
+            nombre: 'Ingeniería Comercial',
+            activo: true,
+          },
         ]),
       }),
     };
@@ -63,8 +75,16 @@ describe('CarrerasService (CU5: Gestión de Carreras)', () => {
   it('debe crear una nueva carrera y registrar en auditoría', async () => {
     mockCarreraRepo.findOne.mockResolvedValue(null);
 
-    const dto = { codigo: '186-5', nombre: 'Ingeniería Comercial', activo: true };
-    const res = await service.crear(dto, { id_usuario: 1, correo: 'admin@uagrm.edu.bo' }, '127.0.0.1');
+    const dto = {
+      codigo: '186-5',
+      nombre: 'Ingeniería Comercial',
+      activo: true,
+    };
+    const res = await service.crear(
+      dto,
+      { id_usuario: 1, correo: 'admin@uagrm.edu.bo' },
+      '127.0.0.1',
+    );
 
     expect(res.codigo).toBe('186-5');
     expect(mockCarreraRepo.save).toHaveBeenCalled();
@@ -77,9 +97,16 @@ describe('CarrerasService (CU5: Gestión de Carreras)', () => {
   });
 
   it('debe rechazar la creación si el código ya existe (ConflictException)', async () => {
-    mockCarreraRepo.findOne.mockResolvedValue({ id_carrera: 1, codigo: '186-5' });
+    mockCarreraRepo.findOne.mockResolvedValue({
+      id_carrera: 1,
+      codigo: '186-5',
+    });
 
-    const dto = { codigo: '186-5', nombre: 'Ingeniería Comercial', activo: true };
+    const dto = {
+      codigo: '186-5',
+      nombre: 'Ingeniería Comercial',
+      activo: true,
+    };
     await expect(service.crear(dto)).rejects.toThrow(ConflictException);
   });
 

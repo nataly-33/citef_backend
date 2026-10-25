@@ -96,7 +96,9 @@ export class HorariosService {
     });
 
     if (!horario) {
-      throw new NotFoundException(`Horario operativo con ID ${id} no encontrado`);
+      throw new NotFoundException(
+        `Horario operativo con ID ${id} no encontrado`,
+      );
     }
 
     return horario;

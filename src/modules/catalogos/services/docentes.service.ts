@@ -102,7 +102,9 @@ export class DocentesService {
     });
 
     if (!docente) {
-      throw new NotFoundException(`Docente con código "${codigo}" no encontrado`);
+      throw new NotFoundException(
+        `Docente con código "${codigo}" no encontrado`,
+      );
     }
 
     return this.mapDocente(docente);
@@ -222,7 +224,9 @@ export class DocentesService {
     });
 
     if (!docente) {
-      throw new NotFoundException(`Docente con código "${codigo}" no encontrado`);
+      throw new NotFoundException(
+        `Docente con código "${codigo}" no encontrado`,
+      );
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -238,7 +242,10 @@ export class DocentesService {
             const correoDuplicado = await queryRunner.manager.findOne(Usuario, {
               where: { correo_institucional: correoNuevo },
             });
-            if (correoDuplicado && correoDuplicado.id_usuario !== usuario.id_usuario) {
+            if (
+              correoDuplicado &&
+              correoDuplicado.id_usuario !== usuario.id_usuario
+            ) {
               throw new ConflictException(
                 `El correo ${correoNuevo} ya está en uso por otro usuario`,
               );
@@ -248,9 +255,10 @@ export class DocentesService {
         }
 
         if (dto.nombres !== undefined) usuario.nombres = dto.nombres.trim();
-        if (dto.apellidos !== undefined) usuario.apellidos = dto.apellidos.trim();
+        if (dto.apellidos !== undefined)
+          usuario.apellidos = dto.apellidos.trim();
         if (dto.telefono !== undefined) {
-          usuario.telefono = dto.telefono ? dto.telefono.trim() : (null as any);
+          usuario.telefono = dto.telefono ? dto.telefono.trim() : null;
         }
         if (dto.activo !== undefined) usuario.activo = dto.activo;
 
@@ -314,7 +322,9 @@ export class DocentesService {
     });
 
     if (!docente) {
-      throw new NotFoundException(`Docente con código "${codigo}" no encontrado`);
+      throw new NotFoundException(
+        `Docente con código "${codigo}" no encontrado`,
+      );
     }
 
     docente.activo = activo;
@@ -353,7 +363,15 @@ export class DocentesService {
   generarPlantillaExcel(): Buffer {
     const wb = XLSX.utils.book_new();
     const data = [
-      ['codigo', 'nombres', 'apellidos', 'correo', 'telefono', 'departamento', 'condicion'],
+      [
+        'codigo',
+        'nombres',
+        'apellidos',
+        'correo',
+        'telefono',
+        'departamento',
+        'condicion',
+      ],
       [
         'DOC-1001',
         'Carlos Alberto',
@@ -424,13 +442,18 @@ export class DocentesService {
     try {
       if (isCsv) {
         const textContent = fileBuffer.toString('utf-8');
-        const firstLine = textContent.split(/\r?\n/).find((l) => l.trim().length > 0) || '';
+        const firstLine =
+          textContent.split(/\r?\n/).find((l) => l.trim().length > 0) || '';
         const semicolonCount = (firstLine.match(/;/g) || []).length;
         const commaCount = (firstLine.match(/,/g) || []).length;
         const delimiter = semicolonCount > commaCount ? ';' : ',';
 
         try {
-          workbook = XLSX.read(textContent, { type: 'string', FS: delimiter, raw: true });
+          workbook = XLSX.read(textContent, {
+            type: 'string',
+            FS: delimiter,
+            raw: true,
+          });
         } catch {
           workbook = XLSX.read(fileBuffer, { type: 'buffer' });
         }
@@ -444,7 +467,9 @@ export class DocentesService {
     }
 
     if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-      throw new BadRequestException('El archivo no contiene ninguna hoja con datos');
+      throw new BadRequestException(
+        'El archivo no contiene ninguna hoja con datos',
+      );
     }
 
     const firstSheetName = workbook.SheetNames[0];
@@ -456,10 +481,21 @@ export class DocentesService {
     });
 
     // Descomponer si la fila quedó en una sola celda delimitada
-    if (rows && rows.length > 0 && rows[0].length === 1 && typeof rows[0][0] === 'string') {
-      const sep = rows[0][0].includes(';') ? ';' : rows[0][0].includes(',') ? ',' : null;
+    if (
+      rows &&
+      rows.length > 0 &&
+      rows[0].length === 1 &&
+      typeof rows[0][0] === 'string'
+    ) {
+      const sep = rows[0][0].includes(';')
+        ? ';'
+        : rows[0][0].includes(',')
+          ? ','
+          : null;
       if (sep) {
-        rows = rows.map((r) => (typeof r[0] === 'string' ? r[0].split(sep) : r));
+        rows = rows.map((r) =>
+          typeof r[0] === 'string' ? r[0].split(sep) : r,
+        );
       }
     }
 
@@ -471,7 +507,12 @@ export class DocentesService {
 
     // 1. Validar encabezados en la fila 1 (con soporte a variaciones de acentos y formatos)
     const rawHeaders = rows[0].map((h) =>
-      String(h || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\s_-]+/g, ''),
+      String(h || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[\s_-]+/g, ''),
     );
 
     const findHeaderCol = (aliases: string[]): number => {
@@ -485,8 +526,16 @@ export class DocentesService {
     const colApellidos = findHeaderCol(['apellidos', 'apellido']);
     const colCorreo = findHeaderCol(['correo', 'email', 'correoinstitucional']);
     const colTelefono = findHeaderCol(['telefono', 'celular', 'telf']);
-    const colDepartamento = findHeaderCol(['departamento', 'depto', 'departamentoacademico']);
-    const colCondicion = findHeaderCol(['condicion', 'contrato', 'condicioncontrato']);
+    const colDepartamento = findHeaderCol([
+      'departamento',
+      'depto',
+      'departamentoacademico',
+    ]);
+    const colCondicion = findHeaderCol([
+      'condicion',
+      'contrato',
+      'condicioncontrato',
+    ]);
 
     if (
       colCodigo === -1 ||
@@ -520,15 +569,21 @@ export class DocentesService {
 
       if (
         !row ||
-        row.every((c) => c === null || c === undefined || String(c).trim() === '')
+        row.every(
+          (c) => c === null || c === undefined || String(c).trim() === '',
+        )
       ) {
         continue;
       }
 
-      const codigo = String(row[colCodigo] ?? '').trim().toUpperCase();
+      const codigo = String(row[colCodigo] ?? '')
+        .trim()
+        .toUpperCase();
       const nombres = String(row[colNombres] ?? '').trim();
       const apellidos = String(row[colApellidos] ?? '').trim();
-      const correo = String(row[colCorreo] ?? '').trim().toLowerCase();
+      const correo = String(row[colCorreo] ?? '')
+        .trim()
+        .toLowerCase();
       const telefono =
         colTelefono !== -1 && row[colTelefono]
           ? String(row[colTelefono]).trim()
@@ -610,7 +665,10 @@ export class DocentesService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
-    const passwordHashDocente = await bcrypt.hash(PASSWORD_GENERICA_DOCENTES, 10);
+    const passwordHashDocente = await bcrypt.hash(
+      PASSWORD_GENERICA_DOCENTES,
+      10,
+    );
 
     try {
       const rolDocente = await queryRunner.manager.findOne(Rol, {
@@ -647,7 +705,10 @@ export class DocentesService {
           }
 
           // Asignar rol docente si no lo tenía
-          if (rolDocente && !usuario.roles.some((r) => r.nombre === 'DOCENTE')) {
+          if (
+            rolDocente &&
+            !usuario.roles.some((r) => r.nombre === 'DOCENTE')
+          ) {
             usuario.roles.push(rolDocente);
             await queryRunner.manager.save(usuario);
           }
@@ -681,7 +742,10 @@ export class DocentesService {
       this.logger.error(
         `[DOCENTES] Transacción abortada durante la importación del archivo "${fileName}": ${err.message}`,
       );
-      if (err instanceof BadRequestException || err instanceof ConflictException) {
+      if (
+        err instanceof BadRequestException ||
+        err instanceof ConflictException
+      ) {
         throw err;
       }
       if (err.code === '23505') {

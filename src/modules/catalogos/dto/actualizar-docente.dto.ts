@@ -14,7 +14,9 @@ export class ActualizarDocenteDto {
   })
   @IsOptional()
   @IsString({ message: 'Los nombres deben ser una cadena de texto' })
-  @MaxLength(100, { message: 'Los nombres no pueden exceder los 100 caracteres' })
+  @MaxLength(100, {
+    message: 'Los nombres no pueden exceder los 100 caracteres',
+  })
   nombres?: string;
 
   @ApiPropertyOptional({
@@ -23,7 +25,9 @@ export class ActualizarDocenteDto {
   })
   @IsOptional()
   @IsString({ message: 'Los apellidos deben ser una cadena de texto' })
-  @MaxLength(100, { message: 'Los apellidos no pueden exceder los 100 caracteres' })
+  @MaxLength(100, {
+    message: 'Los apellidos no pueden exceder los 100 caracteres',
+  })
   apellidos?: string;
 
   @ApiPropertyOptional({
@@ -31,7 +35,10 @@ export class ActualizarDocenteDto {
     description: 'Correo electrónico del docente',
   })
   @IsOptional()
-  @IsEmail({}, { message: 'El correo electrónico debe tener un formato válido' })
+  @IsEmail(
+    {},
+    { message: 'El correo electrónico debe tener un formato válido' },
+  )
   @MaxLength(150, { message: 'El correo no puede exceder los 150 caracteres' })
   correo?: string;
 
@@ -49,8 +56,12 @@ export class ActualizarDocenteDto {
     description: 'Departamento académico facultativo',
   })
   @IsOptional()
-  @IsString({ message: 'El departamento académico debe ser una cadena de texto' })
-  @MaxLength(100, { message: 'El departamento no puede exceder los 100 caracteres' })
+  @IsString({
+    message: 'El departamento académico debe ser una cadena de texto',
+  })
+  @MaxLength(100, {
+    message: 'El departamento no puede exceder los 100 caracteres',
+  })
   departamento_academico?: string;
 
   @ApiPropertyOptional({
@@ -58,7 +69,9 @@ export class ActualizarDocenteDto {
     description: 'Condición de contrato (TITULAR, INVITADO)',
   })
   @IsOptional()
-  @IsString({ message: 'La condición de contrato debe ser una cadena de texto' })
+  @IsString({
+    message: 'La condición de contrato debe ser una cadena de texto',
+  })
   @MaxLength(30, { message: 'La condición no puede exceder los 30 caracteres' })
   condicion_contrato?: string;
 

@@ -80,7 +80,8 @@ export class DocentesController {
 
   @Get('plantilla/excel')
   @ApiOperation({
-    summary: 'CU7: Descargar plantilla oficial en formato Excel (.xlsx) para importación',
+    summary:
+      'CU7: Descargar plantilla oficial en formato Excel (.xlsx) para importación',
   })
   descargarPlantilla(@Res() res: Response) {
     const buffer = this.docentesService.generarPlantillaExcel();
@@ -98,7 +99,8 @@ export class DocentesController {
 
   @Get('plantilla/estructura')
   @ApiOperation({
-    summary: 'CU7: Obtener estructura y columnas requeridas de la plantilla en JSON',
+    summary:
+      'CU7: Obtener estructura y columnas requeridas de la plantilla en JSON',
   })
   obtenerEstructuraPlantilla() {
     return this.docentesService.obtenerEstructuraPlantilla();
@@ -133,7 +135,9 @@ export class DocentesController {
   }
 
   @Patch(':codigo/estado')
-  @ApiOperation({ summary: 'CU7: Cambiar estado activo/inactivo de un docente' })
+  @ApiOperation({
+    summary: 'CU7: Cambiar estado activo/inactivo de un docente',
+  })
   cambiarEstado(
     @Param('codigo') codigo: string,
     @Body('activo') activo: boolean,
@@ -156,7 +160,8 @@ export class DocentesController {
   @Post('importar-excel')
   @UseInterceptors(FileInterceptor('archivo'))
   @ApiOperation({
-    summary: 'CU7: Carga masiva y atómica de padrón docente vía Excel (.xlsx, .xls) o CSV',
+    summary:
+      'CU7: Carga masiva y atómica de padrón docente vía Excel (.xlsx, .xls) o CSV',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -166,7 +171,8 @@ export class DocentesController {
         archivo: {
           type: 'string',
           format: 'binary',
-          description: 'Libro de Excel (.xlsx, .xls) o archivo .csv con columnas: codigo, nombres, apellidos, correo',
+          description:
+            'Libro de Excel (.xlsx, .xls) o archivo .csv con columnas: codigo, nombres, apellidos, correo',
         },
       },
     },

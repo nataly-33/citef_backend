@@ -20,7 +20,8 @@ export class CrearHorarioDto {
 
   @ApiProperty({
     example: '07:00:00',
-    description: 'Hora de inicio de la franja horaria (formato HH:mm:ss o HH:mm)',
+    description:
+      'Hora de inicio de la franja horaria (formato HH:mm:ss o HH:mm)',
   })
   @IsString({ message: 'La hora de inicio debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'La hora de inicio es obligatoria' })
@@ -31,7 +32,8 @@ export class CrearHorarioDto {
 
   @ApiProperty({
     example: '12:00:00',
-    description: 'Hora de finalización de la franja horaria (formato HH:mm:ss o HH:mm)',
+    description:
+      'Hora de finalización de la franja horaria (formato HH:mm:ss o HH:mm)',
   })
   @IsString({ message: 'La hora de fin debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'La hora de fin es obligatoria' })

@@ -79,10 +79,9 @@ export class MateriasService {
     }
 
     if (params?.busqueda) {
-      qb.andWhere(
-        '(m.sigla ILIKE :q OR m.nombre ILIKE :q)',
-        { q: `%${params.busqueda}%` },
-      );
+      qb.andWhere('(m.sigla ILIKE :q OR m.nombre ILIKE :q)', {
+        q: `%${params.busqueda}%`,
+      });
     }
 
     if (params?.todos) {
@@ -143,7 +142,10 @@ export class MateriasService {
     }
 
     // Resolver lista de carreras a asociar
-    let carrerasAAsociar: Array<{ id_carrera: number; semestre_nivel: number }> = [];
+    let carrerasAAsociar: Array<{
+      id_carrera: number;
+      semestre_nivel: number;
+    }> = [];
     if (dto.carreras && dto.carreras.length > 0) {
       carrerasAAsociar = dto.carreras;
     } else if (dto.id_carrera) {
@@ -157,9 +159,13 @@ export class MateriasService {
 
     // Validar que existan las carreras
     for (const ca of carrerasAAsociar) {
-      const c = await this.carreraRepo.findOne({ where: { id_carrera: ca.id_carrera } });
+      const c = await this.carreraRepo.findOne({
+        where: { id_carrera: ca.id_carrera },
+      });
       if (!c) {
-        throw new NotFoundException(`La carrera con ID ${ca.id_carrera} no existe`);
+        throw new NotFoundException(
+          `La carrera con ID ${ca.id_carrera} no existe`,
+        );
       }
     }
 
@@ -233,7 +239,9 @@ export class MateriasService {
     if (dto.sigla) {
       const siglaNueva = dto.sigla.trim().toUpperCase();
       if (siglaNueva !== materia.sigla) {
-        const duplicado = await this.materiaRepo.findOne({ where: { sigla: siglaNueva } });
+        const duplicado = await this.materiaRepo.findOne({
+          where: { sigla: siglaNueva },
+        });
         if (duplicado && duplicado.id_materia !== id) {
           throw new ConflictException(
             `Ya existe otra materia con la sigla ${siglaNueva}`,
@@ -304,7 +312,9 @@ export class MateriasService {
     ejecutor?: { id_usuario?: number; correo?: string },
     ipCliente?: string,
   ) {
-    const materia = await this.materiaRepo.findOne({ where: { id_materia: id } });
+    const materia = await this.materiaRepo.findOne({
+      where: { id_materia: id },
+    });
     if (!materia) {
       throw new NotFoundException(`Materia con ID ${id} no encontrada`);
     }

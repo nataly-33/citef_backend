@@ -38,10 +38,9 @@ export class CarrerasService {
       }
 
       if (params.busqueda) {
-        qb.andWhere(
-          '(c.codigo ILIKE :q OR c.nombre ILIKE :q)',
-          { q: `%${params.busqueda}%` },
-        );
+        qb.andWhere('(c.codigo ILIKE :q OR c.nombre ILIKE :q)', {
+          q: `%${params.busqueda}%`,
+        });
       }
 
       return qb.getMany();
@@ -64,10 +63,9 @@ export class CarrerasService {
     }
 
     if (params?.busqueda) {
-      qb.andWhere(
-        '(c.codigo ILIKE :q OR c.nombre ILIKE :q)',
-        { q: `%${params.busqueda}%` },
-      );
+      qb.andWhere('(c.codigo ILIKE :q OR c.nombre ILIKE :q)', {
+        q: `%${params.busqueda}%`,
+      });
     }
 
     const [items, total] = await qb.getManyAndCount();

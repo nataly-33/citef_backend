@@ -54,7 +54,8 @@ export class OperativosController {
     'TIEMPOREAL_ASISTENCIAS',
   )
   @ApiOperation({
-    summary: 'CU6: Listar motivos de uso con filtro por tipo y paginación de 15 filas',
+    summary:
+      'CU6: Listar motivos de uso con filtro por tipo y paginación de 15 filas',
   })
   @ApiQuery({ name: 'pagina', required: false, type: Number })
   @ApiQuery({ name: 'limite', required: false, type: Number })
@@ -62,7 +63,10 @@ export class OperativosController {
   @ApiQuery({ name: 'busqueda', required: false, type: String })
   @ApiQuery({ name: 'activo', required: false, type: Boolean })
   @ApiQuery({ name: 'todos', required: false, type: Boolean })
-  @ApiResponse({ status: 200, description: 'Listado de motivos de uso obtenido' })
+  @ApiResponse({
+    status: 200,
+    description: 'Listado de motivos de uso obtenido',
+  })
   findAllMotivos(
     @Query('pagina') pagina?: number,
     @Query('limite') limite?: number,
@@ -147,14 +151,18 @@ export class OperativosController {
 
   @Get('horarios')
   @ApiOperation({
-    summary: 'CU6: Listar franjas horarias operativas con paginación de 15 filas',
+    summary:
+      'CU6: Listar franjas horarias operativas con paginación de 15 filas',
   })
   @ApiQuery({ name: 'pagina', required: false, type: Number })
   @ApiQuery({ name: 'limite', required: false, type: Number })
   @ApiQuery({ name: 'turno', required: false, type: String })
   @ApiQuery({ name: 'activo', required: false, type: Boolean })
   @ApiQuery({ name: 'todos', required: false, type: Boolean })
-  @ApiResponse({ status: 200, description: 'Listado de franjas horarias obtenido' })
+  @ApiResponse({
+    status: 200,
+    description: 'Listado de franjas horarias obtenido',
+  })
   findAllHorarios(
     @Query('pagina') pagina?: number,
     @Query('limite') limite?: number,
@@ -177,7 +185,8 @@ export class OperativosController {
 
   @Get('horarios/todos')
   @ApiOperation({
-    summary: 'CU6/CU8: Listar todas las franjas horarias operativas activas para selectores',
+    summary:
+      'CU6/CU8: Listar todas las franjas horarias operativas activas para selectores',
   })
   findAllHorariosTodos() {
     return this.horariosService.findAll({ todos: true, activo: true });
@@ -212,7 +221,9 @@ export class OperativosController {
   }
 
   @Patch('horarios/:id/estado')
-  @ApiOperation({ summary: 'CU6: Cambiar estado activo/inactivo de un horario' })
+  @ApiOperation({
+    summary: 'CU6: Cambiar estado activo/inactivo de un horario',
+  })
   cambiarEstadoHorario(
     @Param('id', ParseIntPipe) id: number,
     @Body('activo') activo: boolean,

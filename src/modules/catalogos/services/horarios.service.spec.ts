@@ -12,7 +12,9 @@ describe('HorariosService (CU6: Gestión de Horarios)', () => {
     mockHorarioRepo = {
       findOne: jest.fn(),
       find: jest.fn(),
-      create: jest.fn().mockImplementation((dto) => ({ id_horario: 1, ...dto })),
+      create: jest
+        .fn()
+        .mockImplementation((dto) => ({ id_horario: 1, ...dto })),
       save: jest.fn().mockImplementation((h) => Promise.resolve(h)),
       createQueryBuilder: jest.fn().mockReturnValue({
         orderBy: jest.fn().mockReturnThis(),
@@ -20,7 +22,15 @@ describe('HorariosService (CU6: Gestión de Horarios)', () => {
         skip: jest.fn().mockReturnThis(),
         andWhere: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn().mockResolvedValue([
-          [{ id_horario: 1, turno: 'MAÑANA', hora_inicio: '07:00:00', hora_fin: '12:00:00', activo: true }],
+          [
+            {
+              id_horario: 1,
+              turno: 'MAÑANA',
+              hora_inicio: '07:00:00',
+              hora_fin: '12:00:00',
+              activo: true,
+            },
+          ],
           1,
         ]),
       }),
@@ -52,7 +62,11 @@ describe('HorariosService (CU6: Gestión de Horarios)', () => {
       hora_fin: '12:00:00',
     };
 
-    const res = await service.crear(dto, { id_usuario: 1, correo: 'admin@uagrm.edu.bo' }, '127.0.0.1');
+    const res = await service.crear(
+      dto,
+      { id_usuario: 1, correo: 'admin@uagrm.edu.bo' },
+      '127.0.0.1',
+    );
     expect(res.turno).toBe('MAÑANA');
     expect(mockHorarioRepo.save).toHaveBeenCalled();
   });
@@ -64,6 +78,8 @@ describe('HorariosService (CU6: Gestión de Horarios)', () => {
       hora_fin: '07:00:00',
     };
 
-    await expect(service.crear(dtoInvalido)).rejects.toThrow(BadRequestException);
+    await expect(service.crear(dtoInvalido)).rejects.toThrow(
+      BadRequestException,
+    );
   });
 });

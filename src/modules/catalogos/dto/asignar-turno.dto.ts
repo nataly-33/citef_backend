@@ -13,7 +13,8 @@ import {
 export class AsignarTurnoDto {
   @ApiProperty({
     example: 4,
-    description: 'ID del usuario auxiliar al que se asignará el turno (debe tener rol AUXILIAR)',
+    description:
+      'ID del usuario auxiliar al que se asignará el turno (debe tener rol AUXILIAR)',
   })
   @IsInt({ message: 'El ID de usuario debe ser un número entero' })
   @IsPositive({ message: 'El ID de usuario debe ser un número positivo' })
@@ -42,15 +43,22 @@ export class AsignarTurnoDto {
     example: '2026-02-01',
     description: 'Fecha de inicio del periodo semestral (formato YYYY-MM-DD)',
   })
-  @IsDateString({}, { message: 'La fecha de inicio debe tener formato YYYY-MM-DD válido' })
+  @IsDateString(
+    {},
+    { message: 'La fecha de inicio debe tener formato YYYY-MM-DD válido' },
+  )
   @IsNotEmpty({ message: 'La fecha de inicio es obligatoria' })
   fecha_inicio: string;
 
   @ApiProperty({
     example: '2026-07-31',
-    description: 'Fecha de finalización del periodo semestral (formato YYYY-MM-DD)',
+    description:
+      'Fecha de finalización del periodo semestral (formato YYYY-MM-DD)',
   })
-  @IsDateString({}, { message: 'La fecha de fin debe tener formato YYYY-MM-DD válido' })
+  @IsDateString(
+    {},
+    { message: 'La fecha de fin debe tener formato YYYY-MM-DD válido' },
+  )
   @IsNotEmpty({ message: 'La fecha de fin es obligatoria' })
   fecha_fin: string;
 

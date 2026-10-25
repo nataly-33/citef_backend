@@ -33,7 +33,10 @@ export class ActualizarTurnoDto {
     description: 'Fecha de inicio del periodo semestral',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'La fecha de inicio debe tener formato YYYY-MM-DD válido' })
+  @IsDateString(
+    {},
+    { message: 'La fecha de inicio debe tener formato YYYY-MM-DD válido' },
+  )
   fecha_inicio?: string;
 
   @ApiPropertyOptional({
@@ -41,7 +44,10 @@ export class ActualizarTurnoDto {
     description: 'Fecha de finalización del periodo semestral',
   })
   @IsOptional()
-  @IsDateString({}, { message: 'La fecha de fin debe tener formato YYYY-MM-DD válido' })
+  @IsDateString(
+    {},
+    { message: 'La fecha de fin debe tener formato YYYY-MM-DD válido' },
+  )
   fecha_fin?: string;
 
   @ApiPropertyOptional({

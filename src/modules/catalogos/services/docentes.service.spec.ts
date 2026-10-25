@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DocentesService } from './docentes.service';
 import { AuditoriaService } from '../../auditoria/auditoria.service';
 import { DataSource } from 'typeorm';
@@ -48,11 +52,18 @@ describe('DocentesService (CU7: Importación y Padrón Docente)', () => {
         release: jest.fn().mockResolvedValue(undefined),
         manager: {
           findOne: jest.fn().mockImplementation((entity) => {
-            if (entity.name === 'Rol') return Promise.resolve({ id_rol: 3, nombre: 'DOCENTE' });
+            if (entity.name === 'Rol')
+              return Promise.resolve({ id_rol: 3, nombre: 'DOCENTE' });
             return Promise.resolve(null);
           }),
-          create: jest.fn().mockImplementation((entity, dto) => ({ ...dto, id_usuario: 1 })),
-          save: jest.fn().mockImplementation((d) => Promise.resolve({ ...d, id_usuario: d.id_usuario || 1 })),
+          create: jest
+            .fn()
+            .mockImplementation((entity, dto) => ({ ...dto, id_usuario: 1 })),
+          save: jest
+            .fn()
+            .mockImplementation((d) =>
+              Promise.resolve({ ...d, id_usuario: d.id_usuario || 1 }),
+            ),
         },
       }),
     };
@@ -94,21 +105,19 @@ describe('DocentesService (CU7: Importación y Padrón Docente)', () => {
   });
 
   it('debe crear un docente individual registrando auditoría', async () => {
-    mockDocenteRepo.findOne
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({
-        codigo: 'DOC-2020',
-        id_usuario: 1,
-        departamento_academico: 'General',
-        condicion_contrato: 'TITULAR',
-        activo: true,
-        usuario: {
-          nombres: 'Mario',
-          apellidos: 'Bunge',
-          correo_institucional: 'mario.bunge@uagrm.edu.bo',
-          telefono: '70011223',
-        },
-      });
+    mockDocenteRepo.findOne.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      codigo: 'DOC-2020',
+      id_usuario: 1,
+      departamento_academico: 'General',
+      condicion_contrato: 'TITULAR',
+      activo: true,
+      usuario: {
+        nombres: 'Mario',
+        apellidos: 'Bunge',
+        correo_institucional: 'mario.bunge@uagrm.edu.bo',
+        telefono: '70011223',
+      },
+    });
 
     const dto = {
       codigo: 'DOC-2020',
@@ -118,7 +127,11 @@ describe('DocentesService (CU7: Importación y Padrón Docente)', () => {
       telefono: '70011223',
     };
 
-    const res = await service.crear(dto, { id_usuario: 1, correo: 'admin@uagrm.edu.bo' }, '127.0.0.1');
+    const res = await service.crear(
+      dto,
+      { id_usuario: 1, correo: 'admin@uagrm.edu.bo' },
+      '127.0.0.1',
+    );
     expect(res.codigo).toBe('DOC-2020');
     expect(mockAuditoriaService.registrar).toHaveBeenCalledWith(
       expect.objectContaining({ accion: 'INSERT', tabla_afectada: 'docente' }),

@@ -15,7 +15,9 @@ export class CrearMotivoDto {
   })
   @IsString({ message: 'La descripción debe ser una cadena de texto' })
   @IsNotEmpty({ message: 'La descripción del motivo es obligatoria' })
-  @MaxLength(100, { message: 'La descripción no puede exceder los 100 caracteres' })
+  @MaxLength(100, {
+    message: 'La descripción no puede exceder los 100 caracteres',
+  })
   descrip: string;
 
   @ApiProperty({
