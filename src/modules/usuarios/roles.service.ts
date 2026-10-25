@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Rol } from './entities/rol.entity';
@@ -49,7 +53,9 @@ export class RolesService {
       where: { nombre: dto.nombre.trim().toUpperCase() },
     });
     if (existe) {
-      throw new ConflictException(`El rol '${dto.nombre}' ya existe en el sistema`);
+      throw new ConflictException(
+        `El rol '${dto.nombre}' ya existe en el sistema`,
+      );
     }
 
     let permisos: Permiso[] = [];

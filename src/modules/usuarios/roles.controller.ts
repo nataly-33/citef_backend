@@ -60,11 +60,7 @@ export class RolesController {
   @Permisos('SEG_ROLES_GESTIONAR')
   @ApiOperation({ summary: 'CU3: Crear un nuevo rol en el sistema' })
   @ApiResponse({ status: 201, description: 'Rol creado exitosamente' })
-  crear(
-    @Body() dto: CrearRolDto,
-    @CurrentUser() user: any,
-    @Ip() ip: string,
-  ) {
+  crear(@Body() dto: CrearRolDto, @CurrentUser() user: any, @Ip() ip: string) {
     return this.rolesService.crear(dto, user, ip);
   }
 

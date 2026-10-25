@@ -13,7 +13,9 @@ describe('UsuariosService (CU1: Gestión de Usuarios)', () => {
     mockUsuarioRepo = {
       findOne: jest.fn(),
       find: jest.fn(),
-      create: jest.fn().mockImplementation((dto) => ({ id_usuario: 10, ...dto })),
+      create: jest
+        .fn()
+        .mockImplementation((dto) => ({ id_usuario: 10, ...dto })),
       save: jest.fn().mockImplementation((u) => Promise.resolve(u)),
       createQueryBuilder: jest.fn().mockReturnValue({
         leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -34,7 +36,9 @@ describe('UsuariosService (CU1: Gestión de Usuarios)', () => {
     };
 
     mockRolRepo = {
-      findBy: jest.fn().mockResolvedValue([{ id_rol: 1, nombre: 'ADMINISTRADOR' }]),
+      findBy: jest
+        .fn()
+        .mockResolvedValue([{ id_rol: 1, nombre: 'ADMINISTRADOR' }]),
     };
 
     mockAuditoriaService = {
@@ -65,7 +69,10 @@ describe('UsuariosService (CU1: Gestión de Usuarios)', () => {
   });
 
   it('debe rechazar la creación si el correo ya existe (ConflictException)', async () => {
-    mockUsuarioRepo.findOne.mockResolvedValue({ id_usuario: 1, correo_institucional: 'duplicado@uagrm.edu.bo' });
+    mockUsuarioRepo.findOne.mockResolvedValue({
+      id_usuario: 1,
+      correo_institucional: 'duplicado@uagrm.edu.bo',
+    });
 
     await expect(
       service.crear({

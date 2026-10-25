@@ -13,7 +13,10 @@ export class CrearUsuarioDto {
     example: 'alumno.ejemplo@gmail.com',
     description: 'Correo electrónico del usuario (institucional o personal)',
   })
-  @IsEmail({}, { message: 'El correo electrónico debe tener un formato válido' })
+  @IsEmail(
+    {},
+    { message: 'El correo electrónico debe tener un formato válido' },
+  )
   @IsNotEmpty({ message: 'El correo electrónico es requerido' })
   correo_institucional: string;
 
@@ -31,7 +34,10 @@ export class CrearUsuarioDto {
   @IsNotEmpty({ message: 'Los nombres son requeridos' })
   nombres: string;
 
-  @ApiProperty({ example: 'Perez Mercado', description: 'Apellidos del usuario' })
+  @ApiProperty({
+    example: 'Perez Mercado',
+    description: 'Apellidos del usuario',
+  })
   @IsString()
   @IsNotEmpty({ message: 'Los apellidos son requeridos' })
   apellidos: string;
@@ -47,7 +53,8 @@ export class CrearUsuarioDto {
 
   @ApiProperty({
     example: [1, 3],
-    description: 'Lista de IDs de roles a asignar (ej: 1=ADMINISTRADOR, 2=DOCENTE, 3=AUXILIAR, 4=TECNICO)',
+    description:
+      'Lista de IDs de roles a asignar (ej: 1=ADMINISTRADOR, 2=DOCENTE, 3=AUXILIAR, 4=TECNICO)',
   })
   @IsArray({ message: 'Los roles deben ser un arreglo de identificadores' })
   @IsNotEmpty({ message: 'Debe asignar al menos un rol al usuario' })

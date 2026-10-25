@@ -25,7 +25,10 @@ export class Rol {
   @JoinTable({
     name: 'rol_permiso',
     joinColumn: { name: 'id_rol', referencedColumnName: 'id_rol' },
-    inverseJoinColumn: { name: 'id_permiso', referencedColumnName: 'id_permiso' },
+    inverseJoinColumn: {
+      name: 'id_permiso',
+      referencedColumnName: 'id_permiso',
+    },
   })
   permisos: Permiso[];
 }
