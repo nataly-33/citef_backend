@@ -159,8 +159,7 @@ export class TurnosController {
   @Get('auxiliares')
   @Permisos('TURNOS_APERTURA_CIERRE')
   @ApiOperation({
-    summary:
-      'CU21: Listar auxiliares disponibles para asignación de relevo',
+    summary: 'CU21: Listar auxiliares disponibles para asignación de relevo',
   })
   async getAuxiliaresParaRelevo() {
     return this.turnosService.getAuxiliaresParaRelevo();

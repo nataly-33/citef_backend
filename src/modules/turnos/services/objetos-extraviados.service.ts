@@ -208,7 +208,8 @@ export class ObjetosExtraviadosService {
 
     const sanitizedItems = items.map((obj) => {
       if (obj.usuario_registro) {
-        const { password_hash: _password_hash, ...uRest } = obj.usuario_registro;
+        const { password_hash: _password_hash, ...uRest } =
+          obj.usuario_registro;
         obj.usuario_registro = uRest as any;
       }
       if (obj.usuario_entrega) {
@@ -248,11 +249,13 @@ export class ObjetosExtraviadosService {
     }
 
     if (objeto.usuario_registro) {
-      const { password_hash: _password_hash, ...uRest } = objeto.usuario_registro;
+      const { password_hash: _password_hash, ...uRest } =
+        objeto.usuario_registro;
       objeto.usuario_registro = uRest as any;
     }
     if (objeto.usuario_entrega) {
-      const { password_hash: _password_hash, ...uRest } = objeto.usuario_entrega;
+      const { password_hash: _password_hash, ...uRest } =
+        objeto.usuario_entrega;
       objeto.usuario_entrega = uRest as any;
     }
 

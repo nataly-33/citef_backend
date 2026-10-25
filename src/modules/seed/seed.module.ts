@@ -19,6 +19,10 @@ import { PerifericoInventario } from '../infraestructura/entities/periferico-inv
 import { Estudiante } from '../ocupacion/entities/estudiante.entity';
 import { AsignacionSesion } from '../ocupacion/entities/asignacion-sesion.entity';
 import { ColaEsperaSala } from '../ocupacion/entities/cola-espera-sala.entity';
+import { AveriaEquipo } from '../turnos/entities/averia-equipo.entity';
+import { MantenimientoTaller } from '../soporte/entities/mantenimiento-taller.entity';
+import { ConfirmacionRetornoSala } from '../soporte/entities/confirmacion-retorno.entity';
+import { IndicadorConfiabilidadRAMS } from '../soporte/entities/indicador-rams.entity';
 
 @Module({
   imports: [
@@ -41,6 +45,10 @@ import { ColaEsperaSala } from '../ocupacion/entities/cola-espera-sala.entity';
       Estudiante,
       AsignacionSesion,
       ColaEsperaSala,
+      AveriaEquipo,
+      MantenimientoTaller,
+      ConfirmacionRetornoSala,
+      IndicadorConfiabilidadRAMS,
     ]),
   ],
   providers: [SeedService],

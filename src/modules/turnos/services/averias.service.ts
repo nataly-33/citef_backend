@@ -301,7 +301,8 @@ export class AveriasService {
     }
 
     if (averia.usuario_reporta) {
-      const { password_hash: _password_hash, ...uRest } = averia.usuario_reporta;
+      const { password_hash: _password_hash, ...uRest } =
+        averia.usuario_reporta;
       averia.usuario_reporta = uRest as any;
     }
 

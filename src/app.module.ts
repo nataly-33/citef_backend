@@ -11,6 +11,7 @@ import { InfraestructuraModule } from './modules/infraestructura/infraestructura
 import { OcupacionModule } from './modules/ocupacion/ocupacion.module';
 import { ReservasModule } from './modules/reservas/reservas.module';
 import { TurnosModule } from './modules/turnos/turnos.module';
+import { SoporteModule } from './modules/soporte/soporte.module';
 import { SeedModule } from './modules/seed/seed.module';
 import { HttpLoggerMiddleware } from './common/middleware/http-logger.middleware';
 
@@ -43,6 +44,7 @@ import { HttpLoggerMiddleware } from './common/middleware/http-logger.middleware
     OcupacionModule,
     ReservasModule,
     TurnosModule,
+    SoporteModule,
     SeedModule,
   ],
   controllers: [AppController],

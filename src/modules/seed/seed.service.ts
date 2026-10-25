@@ -18,6 +18,19 @@ import { PerifericoInventario } from '../infraestructura/entities/periferico-inv
 import { Estudiante } from '../ocupacion/entities/estudiante.entity';
 import { AsignacionSesion } from '../ocupacion/entities/asignacion-sesion.entity';
 import { ColaEsperaSala } from '../ocupacion/entities/cola-espera-sala.entity';
+import {
+  AveriaEquipo,
+  EstadoAveria,
+  TipoFalla,
+} from '../turnos/entities/averia-equipo.entity';
+import {
+  MantenimientoTaller,
+  EstadoMantenimiento,
+  TipoMantenimiento,
+  PrioridadMantenimiento,
+} from '../soporte/entities/mantenimiento-taller.entity';
+import { ConfirmacionRetornoSala } from '../soporte/entities/confirmacion-retorno.entity';
+import { IndicadorConfiabilidadRAMS } from '../soporte/entities/indicador-rams.entity';
 
 @Injectable()
 export class SeedService implements OnApplicationBootstrap {
@@ -56,6 +69,14 @@ export class SeedService implements OnApplicationBootstrap {
     private readonly sesionRepo: Repository<AsignacionSesion>,
     @InjectRepository(ColaEsperaSala)
     private readonly colaRepo: Repository<ColaEsperaSala>,
+    @InjectRepository(AveriaEquipo)
+    private readonly averiaRepo: Repository<AveriaEquipo>,
+    @InjectRepository(MantenimientoTaller)
+    private readonly mantenimientoRepo: Repository<MantenimientoTaller>,
+    @InjectRepository(ConfirmacionRetornoSala)
+    private readonly retornoRepo: Repository<ConfirmacionRetornoSala>,
+    @InjectRepository(IndicadorConfiabilidadRAMS)
+    private readonly indicadorRepo: Repository<IndicadorConfiabilidadRAMS>,
   ) {}
 
   async onApplicationBootstrap() {
@@ -71,6 +92,7 @@ export class SeedService implements OnApplicationBootstrap {
     await this.seedInfraestructura();
     await this.seedEstudiantes();
     await this.seedSesionesIniciales();
+    await this.seedSoporteYTaller();
     this.logger.log('Inicialización de datos completada exitosamente.');
   }
 
@@ -1099,6 +1121,263 @@ export class SeedService implements OnApplicationBootstrap {
 
     this.logger.log(
       'Sesiones de prueba iniciales (activas e históricas) sembradas.',
+    );
+  }
+
+  private async seedSoporteYTaller() {
+    const total = await this.mantenimientoRepo.count();
+    if (total > 0) return;
+
+    const pcs = await this.computadoraRepo.find({
+      take: 8,
+      order: { id_computadora: 'ASC' },
+      relations: { sala: true },
+    });
+    if (pcs.length < 5) return;
+
+    const tecnico = await this.usuarioRepo.findOne({
+      where: { correo_institucional: 'tecnico@uagrm.edu.bo' },
+    });
+    const idTecnico = tecnico?.id_usuario || 1;
+
+    const admin = await this.usuarioRepo.findOne({
+      where: { correo_institucional: 'admin@uagrm.edu.bo' },
+    });
+    const idAdmin = admin?.id_usuario || 1;
+
+    const ahora = new Date();
+    const hoyStr = ahora.toISOString().split('T')[0];
+    const periodoMes = ahora.getMonth() + 1;
+    const periodoAnio = ahora.getFullYear();
+
+    // -----------------------------------------------------------------
+    // 1. ORDEN 1: Retornada a Sala (Reparación Concluida y Confirmada)
+    // -----------------------------------------------------------------
+    const fechaIngreso1 = new Date(ahora.getTime() - 5 * 24 * 3600 * 1000); // Hace 5 días
+    const fechaInicio1 = new Date(
+      ahora.getTime() - 5 * 24 * 3600 * 1000 + 2 * 3600 * 1000,
+    );
+    const fechaFin1 = new Date(ahora.getTime() - 4 * 24 * 3600 * 1000); // Hace 4 días
+
+    const averia1 = await this.averiaRepo.save(
+      this.averiaRepo.create({
+        id_computadora: pcs[3].id_computadora,
+        id_sala: pcs[3].id_sala,
+        id_usuario_reporta: idAdmin,
+        tipo_falla: TipoFalla.HARDWARE,
+        descrip_falla:
+          'Falla total de encendido; el equipo se apaga súbitamente',
+        estado: EstadoAveria.REPARADO,
+        fecha_reporte: fechaIngreso1,
+        solucion_tecnica:
+          'Sustitución de fuente de poder ATX 550W y prueba de estabilidad térmica satisfactoria',
+        fecha_solucion: fechaFin1,
+      }),
+    );
+
+    const orden1 = await this.mantenimientoRepo.save(
+      this.mantenimientoRepo.create({
+        id_computadora: pcs[3].id_computadora,
+        id_averia: averia1.id_averia,
+        id_usuario_tecnico: idTecnico,
+        id_usuario_administrador: idAdmin,
+        estado: EstadoMantenimiento.RETORNADO_A_SALA,
+        tipo_mantenimiento: TipoMantenimiento.CORRECTIVO,
+        prioridad: PrioridadMantenimiento.ALTA,
+        descripcion_problema:
+          'Fuente de poder averiada tras descarga eléctrica en sala',
+        diagnostico_tecnico:
+          'Cortocircuito en circuito primario de fuente ATX 500W con diodos puente en fuga',
+        solucion_aplicada:
+          'Instalación de nueva fuente de poder EVGA 550W 80 Plus Bronce y mantenimiento de cableado',
+        repuestos_utilizados: 'Fuente de poder EVGA 550W 80 Plus',
+        duracion_taller_horas: 2.5,
+        costo_reparacion: 320.0,
+        fecha_hora_ingreso: fechaIngreso1,
+        fecha_hora_inicio_taller: fechaInicio1,
+        fecha_hora_fin_taller: fechaFin1,
+      }),
+    );
+
+    await this.retornoRepo.save(
+      this.retornoRepo.create({
+        id_mantenimiento: orden1.id_mantenimiento,
+        id_usuario_confirma: idAdmin,
+        fecha_hora_retorno: fechaFin1,
+        pruebas_satisfactorias: true,
+        obs_instalacion:
+          'Equipo reinstalado físicamente en sala, conexión gigabit verificada y puesta a punto de SO.',
+      }),
+    );
+
+    // -----------------------------------------------------------------
+    // 2. ORDEN 2: Reparado en Taller (Listo para Retorno / En Banco)
+    // -----------------------------------------------------------------
+    const fechaIngreso2 = new Date(ahora.getTime() - 2 * 24 * 3600 * 1000); // Hace 2 días
+    const fechaInicio2 = new Date(
+      ahora.getTime() - 2 * 24 * 3600 * 1000 + 4 * 3600 * 1000,
+    );
+    const fechaFin2 = new Date(ahora.getTime() - 24 * 3600 * 1000); // Hace 1 día
+
+    pcs[4].estado_actual = 'EN_MANTENIMIENTO';
+    await this.computadoraRepo.save(pcs[4]);
+
+    const averia2 = await this.averiaRepo.save(
+      this.averiaRepo.create({
+        id_computadora: pcs[4].id_computadora,
+        id_sala: pcs[4].id_sala,
+        id_usuario_reporta: idAdmin,
+        tipo_falla: TipoFalla.PERIFERICO,
+        descrip_falla:
+          'Teclado con teclas trabadas y falso contacto en conector USB',
+        estado: EstadoAveria.EN_TALLER,
+        fecha_reporte: fechaIngreso2,
+      }),
+    );
+
+    await this.mantenimientoRepo.save(
+      this.mantenimientoRepo.create({
+        id_computadora: pcs[4].id_computadora,
+        id_averia: averia2.id_averia,
+        id_usuario_tecnico: idTecnico,
+        id_usuario_administrador: idAdmin,
+        estado: EstadoMantenimiento.REPARADO_EN_TALLER,
+        tipo_mantenimiento: TipoMantenimiento.CORRECTIVO,
+        prioridad: PrioridadMantenimiento.MEDIA,
+        descripcion_problema:
+          'Periférico de entrada defectuoso en estación de trabajo',
+        diagnostico_tecnico:
+          'Membrana plástica de teclado degradada y conector USB desoldado',
+        solucion_aplicada:
+          'Reemplazo completo de teclado por periférico Logitech institucional y prueba funcional',
+        repuestos_utilizados: 'Teclado USB Logitech K120',
+        duracion_taller_horas: 1.25,
+        costo_reparacion: 85.0,
+        fecha_hora_ingreso: fechaIngreso2,
+        fecha_hora_inicio_taller: fechaInicio2,
+        fecha_hora_fin_taller: fechaFin2,
+      }),
+    );
+
+    // -----------------------------------------------------------------
+    // 3. ORDEN 3: En Reparación (Técnico trabajando activamente)
+    // -----------------------------------------------------------------
+    const fechaIngreso3 = new Date(ahora.getTime() - 20 * 3600 * 1000); // Hace 20 horas
+    const fechaInicio3 = new Date(ahora.getTime() - 3 * 3600 * 1000); // Hace 3 horas
+
+    pcs[5].estado_actual = 'EN_MANTENIMIENTO';
+    await this.computadoraRepo.save(pcs[5]);
+
+    const averia3 = await this.averiaRepo.save(
+      this.averiaRepo.create({
+        id_computadora: pcs[5].id_computadora,
+        id_sala: pcs[5].id_sala,
+        id_usuario_reporta: idAdmin,
+        tipo_falla: TipoFalla.HARDWARE,
+        descrip_falla:
+          'Pantalla azul BSOD (Memory Management) reiterada durante clases',
+        estado: EstadoAveria.EN_TALLER,
+        fecha_reporte: fechaIngreso3,
+      }),
+    );
+
+    await this.mantenimientoRepo.save(
+      this.mantenimientoRepo.create({
+        id_computadora: pcs[5].id_computadora,
+        id_averia: averia3.id_averia,
+        id_usuario_tecnico: idTecnico,
+        id_usuario_administrador: idAdmin,
+        estado: EstadoMantenimiento.EN_REPARACION,
+        tipo_mantenimiento: TipoMantenimiento.CORRECTIVO,
+        prioridad: PrioridadMantenimiento.CRITICA,
+        descripcion_problema:
+          'Inestabilidad del sistema operativo por fallo en memoria física',
+        diagnostico_tecnico:
+          'Errores de direccionamiento en test MemTest86 en banco DIMM DDR4 8GB',
+        solucion_aplicada: null,
+        repuestos_utilizados: null,
+        duracion_taller_horas: null,
+        costo_reparacion: null,
+        fecha_hora_ingreso: fechaIngreso3,
+        fecha_hora_inicio_taller: fechaInicio3,
+      }),
+    );
+
+    // -----------------------------------------------------------------
+    // 4. ORDEN 4: Pendiente en Taller (Cola de entrada / Mantenimiento Preventivo)
+    // -----------------------------------------------------------------
+    const fechaIngreso4 = new Date(ahora.getTime() - 2 * 3600 * 1000); // Hace 2 horas
+
+    pcs[6].estado_actual = 'EN_MANTENIMIENTO';
+    await this.computadoraRepo.save(pcs[6]);
+
+    await this.mantenimientoRepo.save(
+      this.mantenimientoRepo.create({
+        id_computadora: pcs[6].id_computadora,
+        id_averia: null,
+        id_usuario_tecnico: null,
+        id_usuario_administrador: idAdmin,
+        estado: EstadoMantenimiento.PENDIENTE_TALLER,
+        tipo_mantenimiento: TipoMantenimiento.PREVENTIVO,
+        prioridad: PrioridadMantenimiento.MEDIA,
+        descripcion_problema:
+          'Mantenimiento preventivo semestral: limpieza profunda de disipador y actualización de imágenes del laboratorio',
+        diagnostico_tecnico: null,
+        solucion_aplicada: null,
+        repuestos_utilizados: null,
+        duracion_taller_horas: null,
+        costo_reparacion: null,
+        fecha_hora_ingreso: fechaIngreso4,
+      }),
+    );
+
+    // -----------------------------------------------------------------
+    // 5. INDICADORES RAMS INICIALES
+    // -----------------------------------------------------------------
+    for (let i = 0; i < pcs.length; i++) {
+      const pcItem = pcs[i];
+      let cantFallas = 0;
+      let horasParada = 0;
+      let mttr = 0;
+
+      if (i === 3) {
+        // pcs[3] tuvo la falla resuelta de 2.5 horas
+        cantFallas = 1;
+        horasParada = 2.5;
+        mttr = 2.5;
+      } else if (i === 4) {
+        cantFallas = 1;
+        horasParada = 1.25;
+        mttr = 1.25;
+      }
+
+      const horasBase = 360.0;
+      const horasOperativas = Math.max(0, horasBase - horasParada);
+      const mtbf =
+        cantFallas > 0
+          ? Math.round((horasOperativas / cantFallas) * 100) / 100
+          : horasOperativas;
+      const suma = mtbf + mttr;
+      const dispA = suma > 0 ? Math.round((mtbf / suma) * 10000) / 10000 : 1.0;
+
+      await this.indicadorRepo.save(
+        this.indicadorRepo.create({
+          id_computadora: pcItem.id_computadora,
+          id_sala: pcItem.id_sala,
+          periodo_mes: periodoMes,
+          periodo_anio: periodoAnio,
+          cant_fallas_registradas: cantFallas,
+          horas_operativas_totales: horasOperativas,
+          horas_parada_totales: horasParada,
+          mtbf_horas: mtbf,
+          mttr_horas: mttr,
+          disponibilidad_operativa_a: dispA,
+        }),
+      );
+    }
+
+    this.logger.log(
+      'Módulo 7: Órdenes de taller de muestra, actas de retorno e indicadores RAMS sembrados exitosamente.',
     );
   }
 }

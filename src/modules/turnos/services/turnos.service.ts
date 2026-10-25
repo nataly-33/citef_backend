@@ -87,14 +87,32 @@ export class TurnosService {
     const checklistNormalizado = {
       ...dto.checklist_apertura,
       luces: Boolean(dto.checklist_apertura.luces),
-      orden: dto.checklist_apertura.orden ?? dto.checklist_apertura.orden_limpieza ?? true,
-      orden_limpieza: dto.checklist_apertura.orden_limpieza ?? dto.checklist_apertura.orden ?? true,
-      aire: dto.checklist_apertura.aire ?? dto.checklist_apertura.aire_acondicionado ?? true,
-      aire_acondicionado: dto.checklist_apertura.aire_acondicionado ?? dto.checklist_apertura.aire ?? true,
+      orden:
+        dto.checklist_apertura.orden ??
+        dto.checklist_apertura.orden_limpieza ??
+        true,
+      orden_limpieza:
+        dto.checklist_apertura.orden_limpieza ??
+        dto.checklist_apertura.orden ??
+        true,
+      aire:
+        dto.checklist_apertura.aire ??
+        dto.checklist_apertura.aire_acondicionado ??
+        true,
+      aire_acondicionado:
+        dto.checklist_apertura.aire_acondicionado ??
+        dto.checklist_apertura.aire ??
+        true,
       proyector: Boolean(dto.checklist_apertura.proyector),
       pcs_encendidas: dto.checklist_apertura.pcs_encendidas ?? 0,
-      observacion: dto.checklist_apertura.observacion ?? dto.checklist_apertura.observaciones ?? null,
-      observaciones: dto.checklist_apertura.observaciones ?? dto.checklist_apertura.observacion ?? null,
+      observacion:
+        dto.checklist_apertura.observacion ??
+        dto.checklist_apertura.observaciones ??
+        null,
+      observaciones:
+        dto.checklist_apertura.observaciones ??
+        dto.checklist_apertura.observacion ??
+        null,
     };
 
     const nuevaJornada = this.jornadaRepo.create({
