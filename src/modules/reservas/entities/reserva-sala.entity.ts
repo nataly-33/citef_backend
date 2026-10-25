@@ -98,10 +98,20 @@ export class ReservaSala {
   @Column({ type: 'text', nullable: true, name: 'notificacion_docente' })
   notificacion_docente: string | null;
 
-  @Column({ type: 'varchar', length: 50, nullable: true, name: 'id_lote_recurrente' })
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    name: 'id_lote_recurrente',
+  })
   id_lote_recurrente: string | null;
 
-  @Column({ type: 'varchar', length: 50, nullable: true, name: 'id_grupo_multisala' })
+  @Column({
+    type: 'varchar',
+    length: 50,
+    nullable: true,
+    name: 'id_grupo_multisala',
+  })
   id_grupo_multisala: string | null;
 
   @Column({ type: 'smallint', nullable: true, name: 'cant_total_alumnos' })
@@ -122,6 +132,9 @@ export class ReservaSala {
   @CreateDateColumn({ name: 'creado_en', type: 'timestamp with time zone' })
   creado_en: Date;
 
-  @UpdateDateColumn({ name: 'actualizado_en', type: 'timestamp with time zone' })
+  @UpdateDateColumn({
+    name: 'actualizado_en',
+    type: 'timestamp with time zone',
+  })
   actualizado_en: Date;
 }

@@ -13,7 +13,9 @@ import { Logger } from '@nestjs/common';
   },
   namespace: '/ws/reservas',
 })
-export class ReservasGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class ReservasGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -33,7 +35,10 @@ export class ReservasGateway implements OnGatewayConnection, OnGatewayDisconnect
   emitirActualizacionReservas(data?: any) {
     try {
       if (this.server) {
-        this.server.emit('reservas_actualizadas', data || { timestamp: new Date() });
+        this.server.emit(
+          'reservas_actualizadas',
+          data || { timestamp: new Date() },
+        );
         this.logger.log('Evento reservas_actualizadas emitido vía WebSocket');
       }
     } catch (err) {

@@ -8,7 +8,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { ReservaSala, EstadoReserva, TipoReserva } from '../entities/reserva-sala.entity';
+import {
+  ReservaSala,
+  EstadoReserva,
+  TipoReserva,
+} from '../entities/reserva-sala.entity';
 import { AlgoritmoDisponibilidadService } from './algoritmo-disponibilidad.service';
 import { ReservasGateway } from '../gateways/reservas.gateway';
 import { AuditoriaService } from '../../auditoria/auditoria.service';
@@ -62,8 +66,12 @@ export class ReservasService {
 
     // Si el usuario es DOCENTE (no admin ni auxiliar), validar que solo pueda solicitar para sí mismo
     const roles: string[] = currentUser?.roles || [];
-    const esAdminOAuxiliar = roles.includes('ADMINISTRADOR') || roles.includes('AUXILIAR');
-    if (!esAdminOAuxiliar && Number(docente.id_usuario) !== Number(currentUser?.id_usuario)) {
+    const esAdminOAuxiliar =
+      roles.includes('ADMINISTRADOR') || roles.includes('AUXILIAR');
+    if (
+      !esAdminOAuxiliar &&
+      Number(docente.id_usuario) !== Number(currentUser?.id_usuario)
+    ) {
       throw new ForbiddenException(
         'Un docente solo puede registrar solicitudes de reserva para sus propias materias asignadas',
       );
@@ -94,11 +102,16 @@ export class ReservasService {
       where: { id_sala: In(idsSalas) },
     });
     if (salas.length !== idsSalas.length) {
-      throw new NotFoundException('Una o más salas seleccionadas no existen en el sistema');
+      throw new NotFoundException(
+        'Una o más salas seleccionadas no existen en el sistema',
+      );
     }
 
     // Validar capacidad combinada total
-    const capacidadTotal = salas.reduce((acc, s) => acc + (s.cant_estudiantes || 0), 0);
+    const capacidadTotal = salas.reduce(
+      (acc, s) => acc + (s.cant_estudiantes || 0),
+      0,
+    );
     if (dto.cant_estimada_alumnos > capacidadTotal) {
       throw new BadRequestException(
         `La cantidad estimada (${dto.cant_estimada_alumnos} alumnos) excede la capacidad combinada de las salas seleccionadas (${capacidadTotal} puestos).`,
@@ -107,7 +120,14 @@ export class ReservasService {
 
     // 3. Manejo de programación semestral recurrente
     if (dto.fecha_fin_semestre && dto.fecha_fin_semestre > dto.fecha_reserva) {
-      return this.crearLoteRecurrente(dto, salas, capacidadTotal, tipoReserva, currentUser, ip);
+      return this.crearLoteRecurrente(
+        dto,
+        salas,
+        capacidadTotal,
+        tipoReserva,
+        currentUser,
+        ip,
+      );
     }
 
     // Proporción por sala basada en la capacidad física individual
@@ -121,7 +141,9 @@ export class ReservasService {
           cant: Math.min(s.cant_estudiantes, Math.max(1, restante)),
         });
       } else {
-        const prop = Math.round(dto.cant_estimada_alumnos * (s.cant_estudiantes / capacidadTotal));
+        const prop = Math.round(
+          dto.cant_estimada_alumnos * (s.cant_estudiantes / capacidadTotal),
+        );
         const asignada = Math.min(
           s.cant_estudiantes,
           Math.max(1, Math.min(restante - (salas.length - 1 - i), prop)),
@@ -208,7 +230,8 @@ export class ReservasService {
       // 6. Auditoría forense
       await this.auditoriaService.registrar({
         id_usuario: currentUser?.id_usuario,
-        correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
+        correo_usuario:
+          currentUser?.correo || currentUser?.correo_institucional,
         tabla_afectada: 'reserva_sala',
         id_registro_afectado: String(guardada.id_reserva),
         accion: 'INSERT',
@@ -309,10 +332,16 @@ export class ReservasService {
                   cant: Math.min(s.cant_estudiantes, Math.max(1, restante)),
                 });
               } else {
-                const prop = Math.round(dto.cant_estimada_alumnos * (s.cant_estudiantes / capacidadTotal));
+                const prop = Math.round(
+                  dto.cant_estimada_alumnos *
+                    (s.cant_estudiantes / capacidadTotal),
+                );
                 const asignada = Math.min(
                   s.cant_estudiantes,
-                  Math.max(1, Math.min(restante - (salas.length - 1 - i), prop)),
+                  Math.max(
+                    1,
+                    Math.min(restante - (salas.length - 1 - i), prop),
+                  ),
                 );
                 asignaciones.push({ sala: s, cant: asignada });
                 restante -= asignada;
@@ -370,7 +399,9 @@ export class ReservasService {
             }
           }
         } catch (e) {
-          this.logger.warn(`Omisión de fecha ${fechaIso} por conflicto en lote recurrente: ${e}`);
+          this.logger.warn(
+            `Omisión de fecha ${fechaIso} por conflicto en lote recurrente: ${e}`,
+          );
         }
       }
       actual.setUTCDate(actual.getUTCDate() + 1);
@@ -431,7 +462,10 @@ export class ReservasService {
     const esAdmin = roles.includes('ADMINISTRADOR');
 
     // Si es docente ordinario, solo puede editar sus propias reservas
-    if (!esAdmin && Number(reserva.docente.id_usuario) !== Number(currentUser?.id_usuario)) {
+    if (
+      !esAdmin &&
+      Number(reserva.docente.id_usuario) !== Number(currentUser?.id_usuario)
+    ) {
       throw new ForbiddenException(
         'Solo el docente titular de la solicitud o un Administrador pueden modificar la reserva',
       );
@@ -441,8 +475,13 @@ export class ReservasService {
     const nuevaHoraInicio = dto.hora_inicio || reserva.hora_inicio;
     const nuevaHoraFin = dto.hora_fin || reserva.hora_fin;
     const nuevoTipo = dto.tipo_reserva || reserva.tipo_reserva;
-    const nuevoTema = dto.tema_practica ? dto.tema_practica.trim() : reserva.tema_practica;
-    const nuevaCantTotal = dto.cant_estimada_alumnos || reserva.cant_total_alumnos || reserva.cant_estimada_alumnos;
+    const nuevoTema = dto.tema_practica
+      ? dto.tema_practica.trim()
+      : reserva.tema_practica;
+    const nuevaCantTotal =
+      dto.cant_estimada_alumnos ||
+      reserva.cant_total_alumnos ||
+      reserva.cant_estimada_alumnos;
 
     // Obtener todas las reservas vinculadas si es un grupo multi-sala
     const reservasGrupo = reserva.id_grupo_multisala
@@ -469,12 +508,16 @@ export class ReservasService {
     });
 
     if (salasDeseadas.length !== idsSalasDeseadas.length) {
-      throw new NotFoundException('Una o más salas seleccionadas no existen en el sistema');
+      throw new NotFoundException(
+        'Una o más salas seleccionadas no existen en el sistema',
+      );
     }
 
     // Mantener el orden de idsSalasDeseadas
     salasDeseadas.sort(
-      (a, b) => idsSalasDeseadas.indexOf(a.id_sala) - idsSalasDeseadas.indexOf(b.id_sala),
+      (a, b) =>
+        idsSalasDeseadas.indexOf(a.id_sala) -
+        idsSalasDeseadas.indexOf(b.id_sala),
     );
 
     // Validar capacidad combinada total
@@ -500,10 +543,15 @@ export class ReservasService {
           cant: Math.min(s.cant_estudiantes, Math.max(1, restante)),
         });
       } else {
-        const prop = Math.round(nuevaCantTotal * (s.cant_estudiantes / capTotal));
+        const prop = Math.round(
+          nuevaCantTotal * (s.cant_estudiantes / capTotal),
+        );
         const asignada = Math.min(
           s.cant_estudiantes,
-          Math.max(1, Math.min(restante - (salasDeseadas.length - 1 - i), prop)),
+          Math.max(
+            1,
+            Math.min(restante - (salasDeseadas.length - 1 - i), prop),
+          ),
         );
         asignaciones.push({ sala: s, cant: asignada });
         restante -= asignada;
@@ -531,7 +579,7 @@ export class ReservasService {
 
     // Reglas de estado y notas de edición
     let nuevoEstado = reserva.estado;
-    let nuevaEditada = true;
+    const nuevaEditada = true;
     let nuevaObsResolucion = reserva.obs_resolucion;
     let nuevaNotificacionDocente = reserva.notificacion_docente;
 
@@ -615,28 +663,35 @@ export class ReservasService {
 
       for (
         let i = 0;
-        i < Math.max(secundariasExistentes.length, asignacionesSecundarias.length);
+        i <
+        Math.max(secundariasExistentes.length, asignacionesSecundarias.length);
         i++
       ) {
-        if (i < asignacionesSecundarias.length && i < secundariasExistentes.length) {
+        if (
+          i < asignacionesSecundarias.length &&
+          i < secundariasExistentes.length
+        ) {
           // Actualizar secundaria existente
           const asig = asignacionesSecundarias[i];
-          await this.reservaRepository.update(secundariasExistentes[i].id_reserva, {
-            id_sala: asig.sala.id_sala,
-            id_grupo_multisala: idGrupo,
-            salas_grupo: salasGrupoJson,
-            cant_estimada_alumnos: asig.cant,
-            cant_total_alumnos: nuevaCantTotal,
-            fecha_reserva: nuevaFecha,
-            hora_inicio: nuevaHoraInicio,
-            hora_fin: nuevaHoraFin,
-            tema_practica: nuevoTema,
-            tipo_reserva: nuevoTipo,
-            estado: nuevoEstado,
-            editada: nuevaEditada,
-            obs_resolucion: nuevaObsResolucion,
-            notificacion_docente: nuevaNotificacionDocente,
-          });
+          await this.reservaRepository.update(
+            secundariasExistentes[i].id_reserva,
+            {
+              id_sala: asig.sala.id_sala,
+              id_grupo_multisala: idGrupo,
+              salas_grupo: salasGrupoJson,
+              cant_estimada_alumnos: asig.cant,
+              cant_total_alumnos: nuevaCantTotal,
+              fecha_reserva: nuevaFecha,
+              hora_inicio: nuevaHoraInicio,
+              hora_fin: nuevaHoraFin,
+              tema_practica: nuevoTema,
+              tipo_reserva: nuevoTipo,
+              estado: nuevoEstado,
+              editada: nuevaEditada,
+              obs_resolucion: nuevaObsResolucion,
+              notificacion_docente: nuevaNotificacionDocente,
+            },
+          );
         } else if (
           i < asignacionesSecundarias.length &&
           i >= secundariasExistentes.length
@@ -668,7 +723,9 @@ export class ReservasService {
           i < secundariasExistentes.length
         ) {
           // Eliminar sobrante
-          await this.reservaRepository.delete(secundariasExistentes[i].id_reserva);
+          await this.reservaRepository.delete(
+            secundariasExistentes[i].id_reserva,
+          );
         }
       }
     }
@@ -718,8 +775,10 @@ export class ReservasService {
     limite: number;
     totalPaginas: number;
   }> {
-    const pagina = filtros.pagina && filtros.pagina > 0 ? Number(filtros.pagina) : 1;
-    const limite = filtros.limite && filtros.limite > 0 ? Number(filtros.limite) : 15;
+    const pagina =
+      filtros.pagina && filtros.pagina > 0 ? Number(filtros.pagina) : 1;
+    const limite =
+      filtros.limite && filtros.limite > 0 ? Number(filtros.limite) : 15;
     const skip = (pagina - 1) * limite;
 
     const qb = this.reservaRepository
@@ -791,7 +850,9 @@ export class ReservasService {
       .leftJoinAndSelect('reserva.docente', 'docente')
       .leftJoinAndSelect('docente.usuario', 'usuario_docente')
       .leftJoinAndSelect('reserva.materia', 'materia')
-      .where('reserva.estado != :cancelada', { cancelada: EstadoReserva.CANCELADA })
+      .where('reserva.estado != :cancelada', {
+        cancelada: EstadoReserva.CANCELADA,
+      })
       .orderBy('reserva.fecha_reserva', 'ASC')
       .addOrderBy('reserva.hora_inicio', 'ASC');
 
@@ -919,7 +980,8 @@ export class ReservasService {
         };
 
         r.estado = EstadoReserva.APROBADA;
-        r.obs_resolucion = dto.obs_resolucion?.trim() || 'Aprobada por Jefatura';
+        r.obs_resolucion =
+          dto.obs_resolucion?.trim() || 'Aprobada por Jefatura';
         r.editada = false;
         r.id_usuario_administrador = currentUser?.id_usuario;
 
@@ -927,7 +989,8 @@ export class ReservasService {
 
         await this.auditoriaService.registrar({
           id_usuario: currentUser?.id_usuario,
-          correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
+          correo_usuario:
+            currentUser?.correo || currentUser?.correo_institucional,
           tabla_afectada: 'reserva_sala',
           id_registro_afectado: String(r.id_reserva),
           accion: 'UPDATE',
@@ -950,7 +1013,10 @@ export class ReservasService {
       }
 
       // Si se solicitó aprobación masiva para todas las clases recurrentes pendientes
-      if (dto.aprobar_todas_recurrentes && reserva.tipo_reserva === TipoReserva.CLASE) {
+      if (
+        dto.aprobar_todas_recurrentes &&
+        reserva.tipo_reserva === TipoReserva.CLASE
+      ) {
         let otrasPendientes: ReservaSala[] = [];
         if (reserva.id_lote_recurrente) {
           otrasPendientes = await this.reservaRepository.find({
@@ -972,7 +1038,9 @@ export class ReservasService {
         }
 
         const idsGrupo = new Set(reservasGrupo.map((rg) => rg.id_reserva));
-        otrasPendientes = otrasPendientes.filter((op) => !idsGrupo.has(op.id_reserva));
+        otrasPendientes = otrasPendientes.filter(
+          (op) => !idsGrupo.has(op.id_reserva),
+        );
 
         for (const op of otrasPendientes) {
           try {
@@ -1005,7 +1073,8 @@ export class ReservasService {
 
               await this.auditoriaService.registrar({
                 id_usuario: currentUser?.id_usuario,
-                correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
+                correo_usuario:
+                  currentUser?.correo || currentUser?.correo_institucional,
                 tabla_afectada: 'reserva_sala',
                 id_registro_afectado: String(op.id_reserva),
                 accion: 'UPDATE',
@@ -1057,7 +1126,8 @@ export class ReservasService {
 
         await this.auditoriaService.registrar({
           id_usuario: currentUser?.id_usuario,
-          correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
+          correo_usuario:
+            currentUser?.correo || currentUser?.correo_institucional,
           tabla_afectada: 'reserva_sala',
           id_registro_afectado: String(r.id_reserva),
           accion: 'UPDATE',
@@ -1139,7 +1209,10 @@ export class ReservasService {
     const esAdmin = roles.includes('ADMINISTRADOR');
 
     // Validación de pertenencia: Solo el docente titular o administrador puede cancelar
-    if (!esAdmin && Number(reserva.docente.id_usuario) !== Number(currentUser?.id_usuario)) {
+    if (
+      !esAdmin &&
+      Number(reserva.docente.id_usuario) !== Number(currentUser?.id_usuario)
+    ) {
       throw new ForbiddenException(
         'Solo el docente titular de la solicitud o un Administrador pueden cancelar la reserva',
       );
@@ -1169,7 +1242,8 @@ export class ReservasService {
 
       await this.auditoriaService.registrar({
         id_usuario: currentUser?.id_usuario,
-        correo_usuario: currentUser?.correo || currentUser?.correo_institucional,
+        correo_usuario:
+          currentUser?.correo || currentUser?.correo_institucional,
         tabla_afectada: 'reserva_sala',
         id_registro_afectado: String(r.id_reserva),
         accion: 'UPDATE',

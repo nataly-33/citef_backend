@@ -12,13 +12,18 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { TipoReserva } from '../entities/reserva-sala.entity';
 
 export class EditarReservaDto {
-  @ApiPropertyOptional({ description: 'ID de la sala o laboratorio a reasignar' })
+  @ApiPropertyOptional({
+    description: 'ID de la sala o laboratorio a reasignar',
+  })
   @IsOptional()
   @IsInt({ message: 'El ID de la sala debe ser un número entero' })
   @Min(1, { message: 'El ID de la sala no es válido' })
   id_sala?: number;
 
-  @ApiPropertyOptional({ description: 'IDs de salas combinadas si se actualiza asignación multi-sala' })
+  @ApiPropertyOptional({
+    description:
+      'IDs de salas combinadas si se actualiza asignación multi-sala',
+  })
   @IsOptional()
   @IsArray({ message: 'Las salas seleccionadas deben ser un arreglo de IDs' })
   ids_salas?: number[];
@@ -59,12 +64,19 @@ export class EditarReservaDto {
   @Min(1, { message: 'La cantidad estimada debe ser al menos 1 estudiante' })
   cant_estimada_alumnos?: number;
 
-  @ApiPropertyOptional({ description: 'Tipo de reserva académica', enum: TipoReserva })
+  @ApiPropertyOptional({
+    description: 'Tipo de reserva académica',
+    enum: TipoReserva,
+  })
   @IsOptional()
-  @IsEnum(TipoReserva, { message: 'El tipo de reserva debe ser CLASE o EXAMEN' })
+  @IsEnum(TipoReserva, {
+    message: 'El tipo de reserva debe ser CLASE o EXAMEN',
+  })
   tipo_reserva?: TipoReserva;
 
-  @ApiPropertyOptional({ description: 'Observación o justificación del cambio realizado' })
+  @ApiPropertyOptional({
+    description: 'Observación o justificación del cambio realizado',
+  })
   @IsOptional()
   @IsString()
   obs_edicion?: string;

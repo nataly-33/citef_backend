@@ -35,7 +35,14 @@ describe('ReservasService', () => {
   const mockSalaRepo = {
     findOne: jest.fn(),
     find: jest.fn().mockResolvedValue([
-      { id_sala: 1, codigo_sala: 'LAB-1', nombre: 'Sala 1', cant_estudiantes: 30, activo: true, estado_operativo: 'OPERATIVA' },
+      {
+        id_sala: 1,
+        codigo_sala: 'LAB-1',
+        nombre: 'Sala 1',
+        cant_estudiantes: 30,
+        activo: true,
+        estado_operativo: 'OPERATIVA',
+      },
     ]),
   };
 
@@ -111,7 +118,10 @@ describe('ReservasService', () => {
       codigo: 'DOC-1001',
       id_usuario: 5,
     });
-    mockMateriaRepo.findOne.mockResolvedValue({ id_materia: 10, nombre: 'Micro' });
+    mockMateriaRepo.findOne.mockResolvedValue({
+      id_materia: 10,
+      nombre: 'Micro',
+    });
     mockAlgoritmoService.validarDisponibilidad.mockResolvedValue({
       disponible: true,
       mensaje: 'OK',
@@ -122,7 +132,11 @@ describe('ReservasService', () => {
     mockReservaRepo.save.mockResolvedValue(creada);
     mockReservaRepo.findOne.mockResolvedValue(creada);
 
-    const res = await service.solicitar(dto, { id_usuario: 5, roles: ['DOCENTE'] }, '127.0.0.1');
+    const res = await service.solicitar(
+      dto,
+      { id_usuario: 5, roles: ['DOCENTE'] },
+      '127.0.0.1',
+    );
 
     expect(res).toBeDefined();
     expect(res.estado).toBe(EstadoReserva.PENDIENTE);
@@ -146,7 +160,9 @@ describe('ReservasService', () => {
       disponible: true,
       mensaje: 'Disponible',
     });
-    mockReservaRepo.save.mockImplementation((entity) => Promise.resolve(entity));
+    mockReservaRepo.save.mockImplementation((entity) =>
+      Promise.resolve(entity),
+    );
 
     const res = await service.gestionar(
       1,
@@ -197,7 +213,9 @@ describe('ReservasService', () => {
       disponible: true,
       mensaje: 'Disponible',
     });
-    mockReservaRepo.save.mockImplementation((entity) => Promise.resolve(entity));
+    mockReservaRepo.save.mockImplementation((entity) =>
+      Promise.resolve(entity),
+    );
 
     const res = await service.gestionar(
       1,
@@ -261,7 +279,14 @@ describe('ReservasService', () => {
       .mockResolvedValueOnce({ ...reservaOriginal, id_sala: 3 }); // llamada en obtenerPorId()
 
     mockSalaRepo.find.mockResolvedValueOnce([
-      { id_sala: 3, codigo_sala: 'LAB-46', nombre: 'Sala 46', cant_estudiantes: 10, activo: true, estado_operativo: 'OPERATIVA' },
+      {
+        id_sala: 3,
+        codigo_sala: 'LAB-46',
+        nombre: 'Sala 46',
+        cant_estudiantes: 10,
+        activo: true,
+        estado_operativo: 'OPERATIVA',
+      },
     ]);
 
     mockAlgoritmoService.validarDisponibilidad.mockResolvedValue({

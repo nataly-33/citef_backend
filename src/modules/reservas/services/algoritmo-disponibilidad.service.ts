@@ -6,7 +6,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ReservaSala, EstadoReserva, TipoReserva } from '../entities/reserva-sala.entity';
+import {
+  ReservaSala,
+  EstadoReserva,
+  TipoReserva,
+} from '../entities/reserva-sala.entity';
 import { LaboratorioSala } from '../../infraestructura/entities/laboratorio-sala.entity';
 
 export interface ResultadoValidacionDisponibilidad {
@@ -69,7 +73,11 @@ export class AlgoritmoDisponibilidadService {
     }
 
     // 2. Validar capacidad de la sala si se especifica y aplica validación individual
-    if (validarCapacidad && cant_estimada_alumnos && cant_estimada_alumnos > sala.cant_estudiantes) {
+    if (
+      validarCapacidad &&
+      cant_estimada_alumnos &&
+      cant_estimada_alumnos > sala.cant_estudiantes
+    ) {
       throw new BadRequestException(
         `La cantidad estimada (${cant_estimada_alumnos} alumnos) excede la capacidad de la sala ${sala.codigo_sala} (${sala.cant_estudiantes} puestos)`,
       );
@@ -106,10 +114,13 @@ export class AlgoritmoDisponibilidadService {
       .andWhere('reserva.estado IN (:...estadosActivos)', {
         estadosActivos: [EstadoReserva.APROBADA, EstadoReserva.EN_CURSO],
       })
-      .andWhere('(reserva.hora_inicio < :hora_fin AND reserva.hora_fin > :hora_inicio)', {
-        hora_inicio,
-        hora_fin,
-      });
+      .andWhere(
+        '(reserva.hora_inicio < :hora_fin AND reserva.hora_fin > :hora_inicio)',
+        {
+          hora_inicio,
+          hora_fin,
+        },
+      );
 
     if (excluirIdReserva !== undefined && excluirIdReserva !== null) {
       if (Array.isArray(excluirIdReserva)) {
@@ -192,7 +203,9 @@ export class AlgoritmoDisponibilidadService {
    */
   private validarNoEsPasado(fecha_reserva: string, hora_inicio: string): void {
     const ahora = new Date();
-    const [año, mes, dia] = fecha_reserva.split('-').map((v) => parseInt(v, 10));
+    const [año, mes, dia] = fecha_reserva
+      .split('-')
+      .map((v) => parseInt(v, 10));
     const [h, m] = hora_inicio.split(':').map((v) => parseInt(v, 10));
 
     const fechaHoraSolicitada = new Date(año, mes - 1, dia, h, m, 0, 0);

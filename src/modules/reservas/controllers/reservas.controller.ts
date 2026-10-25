@@ -39,7 +39,10 @@ export class ReservasController {
   @ApiOperation({
     summary: 'CU16: Solicitar nueva reserva de aula de cómputo por docente',
   })
-  @ApiResponse({ status: 201, description: 'Reserva registrada en estado PENDIENTE' })
+  @ApiResponse({
+    status: 201,
+    description: 'Reserva registrada en estado PENDIENTE',
+  })
   solicitar(
     @Body() dto: SolicitarReservaDto,
     @CurrentUser() user: any,
@@ -63,7 +66,8 @@ export class ReservasController {
   @Get('calendario')
   @Permisos('RESERVAS_CONSULTAR', 'RESERVAS_SOLICITAR', 'RESERVAS_GESTIONAR')
   @ApiOperation({
-    summary: 'CU17: Obtener reservas en rango de fechas para el calendario visual',
+    summary:
+      'CU17: Obtener reservas en rango de fechas para el calendario visual',
   })
   @ApiQuery({ name: 'id_sala', required: false, type: Number })
   @ApiQuery({ name: 'fecha_desde', required: false, type: String })
@@ -122,7 +126,8 @@ export class ReservasController {
   @Patch(':id')
   @Permisos('RESERVAS_SOLICITAR', 'RESERVAS_GESTIONAR')
   @ApiOperation({
-    summary: 'Modificar/Editar reserva existente por docente titular o administrador',
+    summary:
+      'Modificar/Editar reserva existente por docente titular o administrador',
   })
   @ApiResponse({ status: 200, description: 'Reserva modificada exitosamente' })
   editar(
@@ -137,7 +142,8 @@ export class ReservasController {
   @Patch(':id/gestionar')
   @Permisos('RESERVAS_GESTIONAR')
   @ApiOperation({
-    summary: 'CU20: Aprobar o Rechazar solicitud de reserva formalmente por Jefatura',
+    summary:
+      'CU20: Aprobar o Rechazar solicitud de reserva formalmente por Jefatura',
   })
   gestionar(
     @Param('id', ParseIntPipe) id: number,
@@ -151,7 +157,8 @@ export class ReservasController {
   @Patch(':id/marcar-leida')
   @Permisos('RESERVAS_CONSULTAR', 'RESERVAS_SOLICITAR', 'RESERVAS_GESTIONAR')
   @ApiOperation({
-    summary: 'Marcar notificación o modificación de reserva como leída/revisada',
+    summary:
+      'Marcar notificación o modificación de reserva como leída/revisada',
   })
   marcarLeida(
     @Param('id', ParseIntPipe) id: number,
@@ -164,7 +171,8 @@ export class ReservasController {
   @Patch(':id/cancelar')
   @Permisos('RESERVAS_CANCELAR')
   @ApiOperation({
-    summary: 'CU19: Cancelar reserva de sala por el docente solicitante o administrador',
+    summary:
+      'CU19: Cancelar reserva de sala por el docente solicitante o administrador',
   })
   cancelar(
     @Param('id', ParseIntPipe) id: number,
