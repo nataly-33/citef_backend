@@ -3,7 +3,8 @@ import { IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class ResetPasswordDto {
   @ApiProperty({
-    description: 'Token criptográfico de 64 caracteres recibido por correo institucional',
+    description:
+      'Token criptográfico de 64 caracteres recibido por correo institucional',
     example: 'a8f5f167f44f4964e6c998dee827110c...',
   })
   @IsString()
@@ -16,6 +17,8 @@ export class ResetPasswordDto {
   })
   @IsString()
   @IsNotEmpty({ message: 'La nueva contraseña no puede estar vacía' })
-  @MinLength(6, { message: 'La nueva contraseña debe tener al menos 6 caracteres' })
+  @MinLength(6, {
+    message: 'La nueva contraseña debe tener al menos 6 caracteres',
+  })
   nueva_password: string;
 }

@@ -7,7 +7,10 @@ export class MailService {
 
   constructor(private readonly configService: ConfigService) {}
 
-  async enviarEnlaceRecuperacion(correoDestino: string, token: string): Promise<boolean> {
+  async enviarEnlaceRecuperacion(
+    correoDestino: string,
+    token: string,
+  ): Promise<boolean> {
     const frontendUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:4200';
     const enlace = `${frontendUrl}/recuperar-password?token=${token}`;
@@ -64,28 +67,31 @@ export class MailService {
     `;
 
     // 1. Servicio Principal: Brevo REST API (HTTPS sin dependencias SMTP ni Nodemailer)
-    const brevoApiKey = (this.configService.get<string>('BREVO_API_KEY') || '').trim();
+    const brevoApiKey = (
+      this.configService.get<string>('BREVO_API_KEY') || ''
+    ).trim();
     const brevoSenderEmail = (
       this.configService.get<string>('BREVO_SENDER_EMAIL') ||
       this.configService.get<string>('MAIL_FROM') ||
       ''
     ).trim();
     const brevoSenderName = (
-      this.configService.get<string>('BREVO_SENDER_NAME') ||
-      'CITEF FCEE UAGRM'
+      this.configService.get<string>('BREVO_SENDER_NAME') || 'CITEF FCEE UAGRM'
     ).trim();
 
     if (brevoApiKey && brevoSenderEmail) {
       if (brevoApiKey.startsWith('xsmtpsib-')) {
         this.logger.warn(
           `[BREVO AVISO DE CLAVE] Ha configurado una clave SMTP (${brevoApiKey.substring(0, 15)}...). ` +
-          `Para la API REST de Brevo debe usar una Clave API que comienza con "xkeysib-...". ` +
-          `Genérela en https://app.brevo.com/settings/keys/api en la pestaña "API Keys" (no en la pestaña "SMTP").`,
+            `Para la API REST de Brevo debe usar una Clave API que comienza con "xkeysib-...". ` +
+            `Genérela en https://app.brevo.com/settings/keys/api en la pestaña "API Keys" (no en la pestaña "SMTP").`,
         );
       }
 
       try {
-        this.logger.log(`[BREVO API] Despachando correo de recuperación hacia: ${correoDestino}...`);
+        this.logger.log(
+          `[BREVO API] Despachando correo de recuperación hacia: ${correoDestino}...`,
+        );
 
         const response = await fetch('https://api.brevo.com/v3/smtp/email', {
           method: 'POST',
@@ -113,33 +119,45 @@ export class MailService {
           const resData: any = await response.json();
           this.logger.log(
             `========================================================================\n` +
-            `[BREVO ÉXITO] Correo entregado al servidor de Brevo.\n` +
-            `Message ID           : ${resData.messageId}\n` +
-            `Remitente            : ${brevoSenderName} <${brevoSenderEmail}>\n` +
-            `Destinatario         : ${correoDestino}\n` +
-            `Enlace de Recuperación: ${enlace}\n` +
-            `========================================================================`,
+              `[BREVO ÉXITO] Correo entregado al servidor de Brevo.\n` +
+              `Message ID           : ${resData.messageId}\n` +
+              `Remitente            : ${brevoSenderName} <${brevoSenderEmail}>\n` +
+              `Destinatario         : ${correoDestino}\n` +
+              `Enlace de Recuperación: ${enlace}\n` +
+              `========================================================================`,
           );
           return true;
         } else {
           const errorBody = await response.text();
-          this.logger.error(`[BREVO ERROR] Brevo API respondió (${response.status}): ${errorBody}`);
+          this.logger.error(
+            `[BREVO ERROR] Brevo API respondió (${response.status}): ${errorBody}`,
+          );
         }
       } catch (err: any) {
-        this.logger.error(`[BREVO ERROR] Fallo al invocar Brevo REST API: ${err.message}`);
+        this.logger.error(
+          `[BREVO ERROR] Fallo al invocar Brevo REST API: ${err.message}`,
+        );
       }
     }
 
     // 2. Modo Local / Fallback Seguro (Registro en Consola para pruebas de desarrollo)
-    this.logger.log('========================================================================');
-    this.logger.log(`[MODO LOCAL / CONSOLA - RECUPERACIÓN DE CONTRASEÑA CITEF]`);
+    this.logger.log(
+      '========================================================================',
+    );
+    this.logger.log(
+      `[MODO LOCAL / CONSOLA - RECUPERACIÓN DE CONTRASEÑA CITEF]`,
+    );
     this.logger.log(`Destinatario : ${correoDestino}`);
     this.logger.log(`Enlace       : ${enlace}`);
     this.logger.log(`Validez      : 15 minutos (Token criptográfico SHA-256)`);
     if (!brevoApiKey || !brevoSenderEmail) {
-      this.logger.log(`Nota         : Configure BREVO_API_KEY y BREVO_SENDER_EMAIL en .env para despacho real.`);
+      this.logger.log(
+        `Nota         : Configure BREVO_API_KEY y BREVO_SENDER_EMAIL en .env para despacho real.`,
+      );
     }
-    this.logger.log('========================================================================');
+    this.logger.log(
+      '========================================================================',
+    );
 
     return true;
   }

@@ -40,7 +40,9 @@ describe('AuthService (Módulo 1: Seguridad)', () => {
         { provide: AuditoriaService, useValue: mockAuditoriaService },
         {
           provide: MailService,
-          useValue: { enviarEnlaceRecuperacion: jest.fn().mockResolvedValue(true) },
+          useValue: {
+            enviarEnlaceRecuperacion: jest.fn().mockResolvedValue(true),
+          },
         },
       ],
     }).compile();
@@ -64,7 +66,12 @@ describe('AuthService (Módulo 1: Seguridad)', () => {
         nombres: 'Admin',
         apellidos: 'Central',
         activo: true,
-        roles: [{ nombre: 'ADMINISTRADOR', permisos: [{ codigo: 'SEG_USUARIOS_VER' }] }],
+        roles: [
+          {
+            nombre: 'ADMINISTRADOR',
+            permisos: [{ codigo: 'SEG_USUARIOS_VER' }],
+          },
+        ],
       });
 
       const resultado = await service.login(
@@ -93,7 +100,10 @@ describe('AuthService (Módulo 1: Seguridad)', () => {
       });
 
       await expect(
-        service.login({ correo: 'admin@uagrm.edu.bo', password: 'PasswordErronea' }),
+        service.login({
+          correo: 'admin@uagrm.edu.bo',
+          password: 'PasswordErronea',
+        }),
       ).rejects.toThrow('Credenciales inválidas');
     });
   });

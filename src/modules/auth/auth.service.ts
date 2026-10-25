@@ -49,7 +49,10 @@ export class AuthService {
       );
     }
 
-    const passwordValido = await bcrypt.compare(password, usuario.password_hash);
+    const passwordValido = await bcrypt.compare(
+      password,
+      usuario.password_hash,
+    );
     if (!passwordValido) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
@@ -97,16 +100,23 @@ export class AuthService {
     };
   }
 
-  async solicitarRecuperacion(dto: SolicitarRecuperacionDto, ipCliente?: string) {
+  async solicitarRecuperacion(
+    dto: SolicitarRecuperacionDto,
+    ipCliente?: string,
+  ) {
     const correo = dto.correo.trim().toLowerCase();
-    this.logger.log(`[AUTH] Solicitud de recuperación de contraseña para: ${correo} (IP: ${ipCliente || '127.0.0.1'})`);
+    this.logger.log(
+      `[AUTH] Solicitud de recuperación de contraseña para: ${correo} (IP: ${ipCliente || '127.0.0.1'})`,
+    );
 
     const usuario = await this.usuarioRepo.findOne({
       where: { correo_institucional: correo },
     });
 
     if (!usuario) {
-      this.logger.warn(`[AUTH] Solicitud de recuperación rechazada: correo ${correo} no existe en la base de datos.`);
+      this.logger.warn(
+        `[AUTH] Solicitud de recuperación rechazada: correo ${correo} no existe en la base de datos.`,
+      );
       throw new NotFoundException(
         `No existe ningún usuario registrado con el correo ${correo}`,
       );
@@ -114,7 +124,10 @@ export class AuthService {
 
     // Generar token criptográfico de 64 caracteres hex (32 bytes)
     const rawToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(rawToken)
+      .digest('hex');
 
     // Validez de 15 minutos (requisito CU2)
     const expiraEn = new Date(Date.now() + 15 * 60 * 1000);
@@ -159,7 +172,10 @@ export class AuthService {
 
   async resetPassword(dto: ResetPasswordDto, ipCliente?: string) {
     const { token, nueva_password } = dto;
-    const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(token.trim())
+      .digest('hex');
 
     const tokenRecup = await this.tokenRepo.findOne({
       where: {
@@ -171,7 +187,9 @@ export class AuthService {
     });
 
     if (!tokenRecup || !tokenRecup.usuario) {
-      this.logger.warn(`[AUTH] Intento fallido de restablecimiento: token inválido o expirado.`);
+      this.logger.warn(
+        `[AUTH] Intento fallido de restablecimiento: token inválido o expirado.`,
+      );
       throw new BadRequestException(
         'El token de recuperación es inválido o ha expirado (límite de 15 minutos superado).',
       );
@@ -205,7 +223,8 @@ export class AuthService {
     );
 
     return {
-      mensaje: 'Contraseña restablecida exitosamente. Ahora puede iniciar sesión.',
+      mensaje:
+        'Contraseña restablecida exitosamente. Ahora puede iniciar sesión.',
     };
   }
 }
