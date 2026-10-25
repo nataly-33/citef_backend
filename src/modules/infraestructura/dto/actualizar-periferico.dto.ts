@@ -22,13 +22,17 @@ export class ActualizarPerifericoDto {
 
   @IsOptional()
   @IsString({ message: 'La marca y modelo deben ser texto' })
-  @MaxLength(80, { message: 'La marca y modelo no pueden superar 80 caracteres' })
+  @MaxLength(80, {
+    message: 'La marca y modelo no pueden superar 80 caracteres',
+  })
   marca_modelo?: string;
 
   @IsOptional()
   @IsNotEmpty({ message: 'El número de activo es obligatorio' })
   @IsString({ message: 'El número de activo debe ser texto' })
-  @MaxLength(60, { message: 'El número de activo no puede superar 60 caracteres' })
+  @MaxLength(60, {
+    message: 'El número de activo no puede superar 60 caracteres',
+  })
   numero_activo?: string;
 
   @IsOptional()

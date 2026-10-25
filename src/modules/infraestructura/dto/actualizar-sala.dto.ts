@@ -12,7 +12,9 @@ import {
 export class ActualizarSalaDto {
   @IsOptional()
   @IsString({ message: 'El código de sala debe ser texto' })
-  @MaxLength(20, { message: 'El código de sala no puede exceder 20 caracteres' })
+  @MaxLength(20, {
+    message: 'El código de sala no puede exceder 20 caracteres',
+  })
   codigo_sala?: string;
 
   @IsOptional()

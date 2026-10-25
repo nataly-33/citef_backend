@@ -16,7 +16,9 @@ export class CrearComputadoraDto {
 
   @IsNotEmpty({ message: 'El código de equipo es obligatorio' })
   @IsString({ message: 'El código de equipo debe ser texto' })
-  @MaxLength(30, { message: 'El código de equipo no puede superar 30 caracteres' })
+  @MaxLength(30, {
+    message: 'El código de equipo no puede superar 30 caracteres',
+  })
   codigo_equipo: string;
 
   @IsOptional()
@@ -33,7 +35,8 @@ export class CrearComputadoraDto {
 
   @IsOptional()
   @IsIn(['DISPONIBLE', 'OCUPADA', 'RESERVADA', 'EN_MANTENIMIENTO'], {
-    message: 'El estado debe ser DISPONIBLE, OCUPADA, RESERVADA o EN_MANTENIMIENTO',
+    message:
+      'El estado debe ser DISPONIBLE, OCUPADA, RESERVADA o EN_MANTENIMIENTO',
   })
   estado_actual?: string = 'DISPONIBLE';
 

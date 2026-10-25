@@ -29,7 +29,9 @@ export class Computadora {
   @Column({ type: 'integer' })
   id_sala: number;
 
-  @ManyToOne(() => LaboratorioSala, (s) => s.computadoras, { onDelete: 'CASCADE' })
+  @ManyToOne(() => LaboratorioSala, (s) => s.computadoras, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'id_sala' })
   sala: LaboratorioSala;
 

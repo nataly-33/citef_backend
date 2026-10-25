@@ -103,7 +103,10 @@ describe('SalasService (CU9: Gestión de Salas y Laboratorios)', () => {
   });
 
   it('debe rechazar la creación si el código de sala ya existe', async () => {
-    mockSalaRepo.findOne.mockResolvedValue({ id_sala: 1, codigo_sala: 'LAB-01' });
+    mockSalaRepo.findOne.mockResolvedValue({
+      id_sala: 1,
+      codigo_sala: 'LAB-01',
+    });
 
     await expect(
       service.crear({

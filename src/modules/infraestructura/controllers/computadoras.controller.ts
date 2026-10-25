@@ -23,7 +23,11 @@ export class ComputadorasController {
   constructor(private readonly computadorasService: ComputadorasService) {}
 
   @Get(':id')
-  @Permisos('INFRA_LABS_GESTIONAR', 'INFRA_SALAS_CONFIGURAR', 'INFRA_INVENTARIO_GESTIONAR')
+  @Permisos(
+    'INFRA_LABS_GESTIONAR',
+    'INFRA_SALAS_CONFIGURAR',
+    'INFRA_INVENTARIO_GESTIONAR',
+  )
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.computadorasService.findOne(id);
   }

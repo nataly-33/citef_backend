@@ -40,7 +40,11 @@ export class SalasService {
       );
     }
 
-    if (params?.piso !== undefined && params.piso !== null && !isNaN(params.piso)) {
+    if (
+      params?.piso !== undefined &&
+      params.piso !== null &&
+      !isNaN(params.piso)
+    ) {
       qb.andWhere('s.piso = :piso', { piso: params.piso });
     }
 
@@ -211,13 +215,19 @@ export class SalasService {
 
     if (dto.nombre !== undefined) sala.nombre = dto.nombre.trim();
     if (dto.piso !== undefined) sala.piso = dto.piso;
-    if (dto.cant_estudiantes !== undefined) sala.cant_estudiantes = dto.cant_estudiantes;
-    if (dto.maquina_docente !== undefined) sala.maquina_docente = dto.maquina_docente;
+    if (dto.cant_estudiantes !== undefined)
+      sala.cant_estudiantes = dto.cant_estudiantes;
+    if (dto.maquina_docente !== undefined)
+      sala.maquina_docente = dto.maquina_docente;
     if (dto.proyector !== undefined) sala.proyector = dto.proyector;
-    if (dto.aire_acondicionado !== undefined) sala.aire_acondicionado = dto.aire_acondicionado;
-    if (dto.filas_cuadricula !== undefined) sala.filas_cuadricula = dto.filas_cuadricula;
-    if (dto.columnas_cuadricula !== undefined) sala.columnas_cuadricula = dto.columnas_cuadricula;
-    if (dto.estado_operativo !== undefined) sala.estado_operativo = dto.estado_operativo;
+    if (dto.aire_acondicionado !== undefined)
+      sala.aire_acondicionado = dto.aire_acondicionado;
+    if (dto.filas_cuadricula !== undefined)
+      sala.filas_cuadricula = dto.filas_cuadricula;
+    if (dto.columnas_cuadricula !== undefined)
+      sala.columnas_cuadricula = dto.columnas_cuadricula;
+    if (dto.estado_operativo !== undefined)
+      sala.estado_operativo = dto.estado_operativo;
     if (dto.activo !== undefined) sala.activo = dto.activo;
 
     const actualizada = await this.salaRepo.save(sala);

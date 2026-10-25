@@ -14,7 +14,9 @@ describe('PerifericosService (CU11: Control de Inventario de Periféricos)', () 
     mockPerifericoRepo = {
       findOne: jest.fn(),
       find: jest.fn(),
-      create: jest.fn().mockImplementation((dto) => ({ id_periferico: 1, ...dto })),
+      create: jest
+        .fn()
+        .mockImplementation((dto) => ({ id_periferico: 1, ...dto })),
       save: jest.fn().mockImplementation((p) => Promise.resolve(p)),
       createQueryBuilder: jest.fn().mockReturnValue({
         leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -37,9 +39,13 @@ describe('PerifericosService (CU11: Control de Inventario de Periféricos)', () 
     };
 
     mockTipoRepo = {
-      find: jest.fn().mockResolvedValue([{ id_tipo_periferico: 1, nombre: 'TECLADO' }]),
+      find: jest
+        .fn()
+        .mockResolvedValue([{ id_tipo_periferico: 1, nombre: 'TECLADO' }]),
       findOne: jest.fn(),
-      create: jest.fn().mockImplementation((t) => ({ id_tipo_periferico: 1, ...t })),
+      create: jest
+        .fn()
+        .mockImplementation((t) => ({ id_tipo_periferico: 1, ...t })),
       save: jest.fn().mockImplementation((t) => Promise.resolve(t)),
     };
 
@@ -54,7 +60,10 @@ describe('PerifericosService (CU11: Control de Inventario de Periféricos)', () 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PerifericosService,
-        { provide: 'PerifericoInventarioRepository', useValue: mockPerifericoRepo },
+        {
+          provide: 'PerifericoInventarioRepository',
+          useValue: mockPerifericoRepo,
+        },
         { provide: 'TipoPerifericoRepository', useValue: mockTipoRepo },
         { provide: 'ComputadoraRepository', useValue: mockComputadoraRepo },
         { provide: AuditoriaService, useValue: mockAuditoriaService },
@@ -76,8 +85,14 @@ describe('PerifericosService (CU11: Control de Inventario de Periféricos)', () 
   });
 
   it('debe rechazar registro con número de activo duplicado', async () => {
-    mockTipoRepo.findOne.mockResolvedValue({ id_tipo_periferico: 1, nombre: 'TECLADO' });
-    mockPerifericoRepo.findOne.mockResolvedValue({ id_periferico: 9, numero_activo: 'SN-001' });
+    mockTipoRepo.findOne.mockResolvedValue({
+      id_tipo_periferico: 1,
+      nombre: 'TECLADO',
+    });
+    mockPerifericoRepo.findOne.mockResolvedValue({
+      id_periferico: 9,
+      numero_activo: 'SN-001',
+    });
 
     await expect(
       service.registrar({
@@ -91,7 +106,12 @@ describe('PerifericosService (CU11: Control de Inventario de Periféricos)', () 
   it('debe reasignar periférico a bodega o a computadora', async () => {
     mockPerifericoRepo.findOne
       .mockResolvedValueOnce({ id_periferico: 1, id_computadora: 5 })
-      .mockResolvedValueOnce({ id_periferico: 1, id_computadora: null, tipo: {}, computadora: null });
+      .mockResolvedValueOnce({
+        id_periferico: 1,
+        id_computadora: null,
+        tipo: {},
+        computadora: null,
+      });
 
     const res = await service.asignar(1, { id_computadora: null });
     expect(mockAuditoriaService.registrar).toHaveBeenCalledWith(

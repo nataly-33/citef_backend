@@ -24,20 +24,8 @@ import { AuditoriaModule } from '../auditoria/auditoria.module';
     ]),
     AuditoriaModule,
   ],
-  controllers: [
-    SalasController,
-    ComputadorasController,
-    PerifericosController,
-  ],
-  providers: [
-    SalasService,
-    ComputadorasService,
-    PerifericosService,
-  ],
-  exports: [
-    SalasService,
-    ComputadorasService,
-    PerifericosService,
-  ],
+  controllers: [SalasController, ComputadorasController, PerifericosController],
+  providers: [SalasService, ComputadorasService, PerifericosService],
+  exports: [SalasService, ComputadorasService, PerifericosService],
 })
 export class InfraestructuraModule {}

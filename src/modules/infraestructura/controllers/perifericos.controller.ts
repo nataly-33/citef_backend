@@ -52,12 +52,15 @@ export class PerifericosController {
   ) {
     return this.perifericosService.findAll({
       busqueda,
-      id_tipo_periferico: id_tipo_periferico ? parseInt(id_tipo_periferico, 10) : undefined,
+      id_tipo_periferico: id_tipo_periferico
+        ? parseInt(id_tipo_periferico, 10)
+        : undefined,
       id_sala: id_sala ? parseInt(id_sala, 10) : undefined,
       condicion_fisica,
       id_computadora: id_computadora ? parseInt(id_computadora, 10) : undefined,
       en_bodega: en_bodega === 'true',
-      activo: activo !== undefined && activo !== '' ? activo === 'true' : undefined,
+      activo:
+        activo !== undefined && activo !== '' ? activo === 'true' : undefined,
       pagina: pagina ? parseInt(pagina, 10) : 1,
       limite: limite ? parseInt(limite, 10) : 15,
     });

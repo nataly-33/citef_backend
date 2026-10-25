@@ -75,7 +75,9 @@ export class ComputadorasService {
       const ahora = new Date();
       const minutosTranscurridos = Math.max(
         1,
-        Math.round((ahora.getTime() - new Date(s.fecha_hora_inicio).getTime()) / 60000),
+        Math.round(
+          (ahora.getTime() - new Date(s.fecha_hora_inicio).getTime()) / 60000,
+        ),
       );
       return {
         ...pc,
@@ -123,7 +125,9 @@ export class ComputadorasService {
       const ahora = new Date();
       const minutosTranscurridos = Math.max(
         1,
-        Math.round((ahora.getTime() - new Date(s.fecha_hora_inicio).getTime()) / 60000),
+        Math.round(
+          (ahora.getTime() - new Date(s.fecha_hora_inicio).getTime()) / 60000,
+        ),
       );
       return {
         ...pc,
@@ -159,7 +163,8 @@ export class ComputadorasService {
     }
 
     // Validar capacidad de sala
-    const computadorasActivas = sala.computadoras?.filter((c) => c.activo) || [];
+    const computadorasActivas =
+      sala.computadoras?.filter((c) => c.activo) || [];
     const maxPermitido = sala.cant_estudiantes + (sala.maquina_docente ? 1 : 0);
     if (computadorasActivas.length >= maxPermitido) {
       throw new BadRequestException(
@@ -269,8 +274,12 @@ export class ComputadorasService {
       }
     }
 
-    const nuevaFila = dto.posicion_fila !== undefined ? dto.posicion_fila : pc.posicion_fila;
-    const nuevaCol = dto.posicion_columna !== undefined ? dto.posicion_columna : pc.posicion_columna;
+    const nuevaFila =
+      dto.posicion_fila !== undefined ? dto.posicion_fila : pc.posicion_fila;
+    const nuevaCol =
+      dto.posicion_columna !== undefined
+        ? dto.posicion_columna
+        : pc.posicion_columna;
 
     if (dto.posicion_fila !== undefined || dto.posicion_columna !== undefined) {
       if (
@@ -315,12 +324,17 @@ export class ComputadorasService {
 
     if (
       sesionActiva &&
-      ((dto.estado_actual !== undefined && dto.estado_actual !== 'OCUPADA') || dto.activo === false)
+      ((dto.estado_actual !== undefined && dto.estado_actual !== 'OCUPADA') ||
+        dto.activo === false)
     ) {
       const ahora = new Date();
       const minutosUso = Math.max(
         1,
-        Math.round((ahora.getTime() - new Date(sesionActiva.fecha_hora_inicio).getTime()) / 60000),
+        Math.round(
+          (ahora.getTime() -
+            new Date(sesionActiva.fecha_hora_inicio).getTime()) /
+            60000,
+        ),
       );
       const horasAdicionales = minutosUso / 60.0;
 
@@ -358,11 +372,15 @@ export class ComputadorasService {
       );
     }
 
-    if (dto.maquina_docente !== undefined) pc.maquina_docente = dto.maquina_docente;
+    if (dto.maquina_docente !== undefined)
+      pc.maquina_docente = dto.maquina_docente;
     if (dto.estado_actual !== undefined) pc.estado_actual = dto.estado_actual;
-    if (dto.ip_red !== undefined) pc.ip_red = dto.ip_red ? dto.ip_red.trim() : null;
-    if (dto.mac_address !== undefined) pc.mac_address = dto.mac_address ? dto.mac_address.trim() : null;
-    if (dto.horas_uso_acumuladas !== undefined) pc.horas_uso_acumuladas = dto.horas_uso_acumuladas;
+    if (dto.ip_red !== undefined)
+      pc.ip_red = dto.ip_red ? dto.ip_red.trim() : null;
+    if (dto.mac_address !== undefined)
+      pc.mac_address = dto.mac_address ? dto.mac_address.trim() : null;
+    if (dto.horas_uso_acumuladas !== undefined)
+      pc.horas_uso_acumuladas = dto.horas_uso_acumuladas;
     if (dto.activo !== undefined) pc.activo = dto.activo;
 
     const actualizada = await this.computadoraRepo.save(pc);
@@ -401,7 +419,9 @@ export class ComputadorasService {
 
     const { posiciones } = dto;
     if (!posiciones || posiciones.length === 0) {
-      throw new BadRequestException('El listado de posiciones no puede estar vacío');
+      throw new BadRequestException(
+        'El listado de posiciones no puede estar vacío',
+      );
     }
 
     // Validar solapamientos internos en el payload recibido
@@ -461,8 +481,13 @@ export class ComputadorasService {
       await queryRunner.commitTransaction();
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      this.logger.error(`Error guardando posiciones masivas: ${err.message}`, err.stack);
-      throw new BadRequestException(`No se pudieron guardar las posiciones: ${err.message}`);
+      this.logger.error(
+        `Error guardando posiciones masivas: ${err.message}`,
+        err.stack,
+      );
+      throw new BadRequestException(
+        `No se pudieron guardar las posiciones: ${err.message}`,
+      );
     } finally {
       await queryRunner.release();
     }
@@ -510,18 +535,27 @@ export class ComputadorasService {
         const ahora = new Date();
         const minutosUso = Math.max(
           1,
-          Math.round((ahora.getTime() - new Date(sesionActiva.fecha_hora_inicio).getTime()) / 60000),
+          Math.round(
+            (ahora.getTime() -
+              new Date(sesionActiva.fecha_hora_inicio).getTime()) /
+              60000,
+          ),
         );
         sesionActiva.fecha_hora_fin = ahora;
         sesionActiva.minutos_permanencia = minutosUso;
         sesionActiva.estado = 'CONCLUIDA';
         sesionActiva.observaciones =
-          (sesionActiva.observaciones ? `${sesionActiva.observaciones} | ` : '') +
+          (sesionActiva.observaciones
+            ? `${sesionActiva.observaciones} | `
+            : '') +
           'Sesión finalizada automáticamente por desactivación/retiro de equipo.';
         await this.sesionRepo.save(sesionActiva);
 
         guardada.horas_uso_acumuladas = Number(
-          (Number(guardada.horas_uso_acumuladas || 0) + minutosUso / 60.0).toFixed(2),
+          (
+            Number(guardada.horas_uso_acumuladas || 0) +
+            minutosUso / 60.0
+          ).toFixed(2),
         );
         await this.computadoraRepo.save(guardada);
       }

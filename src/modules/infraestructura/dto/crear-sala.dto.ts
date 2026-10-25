@@ -13,7 +13,9 @@ import {
 export class CrearSalaDto {
   @IsNotEmpty({ message: 'El código de sala es obligatorio' })
   @IsString({ message: 'El código de sala debe ser texto' })
-  @MaxLength(20, { message: 'El código de sala no puede exceder 20 caracteres' })
+  @MaxLength(20, {
+    message: 'El código de sala no puede exceder 20 caracteres',
+  })
   codigo_sala: string;
 
   @IsNotEmpty({ message: 'El nombre de la sala es obligatorio' })

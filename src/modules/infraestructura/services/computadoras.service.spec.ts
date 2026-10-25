@@ -20,7 +20,9 @@ describe('ComputadorasService (CU10: Configuración de Salas y Cuadrícula)', ()
     mockComputadoraRepo = {
       findOne: jest.fn(),
       find: jest.fn(),
-      create: jest.fn().mockImplementation((dto) => ({ id_computadora: 1, ...dto })),
+      create: jest
+        .fn()
+        .mockImplementation((dto) => ({ id_computadora: 1, ...dto })),
       save: jest.fn().mockImplementation((c) => Promise.resolve(c)),
       createQueryBuilder: jest.fn().mockReturnValue({
         where: jest.fn().mockReturnThis(),
@@ -61,7 +63,10 @@ describe('ComputadorasService (CU10: Configuración de Salas y Cuadrícula)', ()
         ComputadorasService,
         { provide: 'ComputadoraRepository', useValue: mockComputadoraRepo },
         { provide: 'LaboratorioSalaRepository', useValue: mockSalaRepo },
-        { provide: 'PerifericoInventarioRepository', useValue: mockPerifericoRepo },
+        {
+          provide: 'PerifericoInventarioRepository',
+          useValue: mockPerifericoRepo,
+        },
         { provide: 'AsignacionSesionRepository', useValue: mockSesionRepo },
         { provide: AuditoriaService, useValue: mockAuditoriaService },
         { provide: DataSource, useValue: mockDataSource },
@@ -83,7 +88,10 @@ describe('ComputadorasService (CU10: Configuración de Salas y Cuadrícula)', ()
       maquina_docente: false,
       filas_cuadricula: 6,
       columnas_cuadricula: 8,
-      computadoras: [{ id_computadora: 1, activo: true }, { id_computadora: 2, activo: true }],
+      computadoras: [
+        { id_computadora: 1, activo: true },
+        { id_computadora: 2, activo: true },
+      ],
     });
 
     await expect(

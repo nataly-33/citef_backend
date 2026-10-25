@@ -70,7 +70,7 @@ export class PerifericosService {
     if (params?.busqueda && params.busqueda.trim() !== '') {
       const term = `%${params.busqueda.trim().toLowerCase()}%`;
       qb.andWhere(
-        '(LOWER(p.marca_modelo) LIKE :term OR LOWER(p.numero_activo) LIKE :term OR LOWER(COALESCE(c.codigo_equipo, \'\')) LIKE :term OR LOWER(COALESCE(s.nombre, \'\')) LIKE :term)',
+        "(LOWER(p.marca_modelo) LIKE :term OR LOWER(p.numero_activo) LIKE :term OR LOWER(COALESCE(c.codigo_equipo, '')) LIKE :term OR LOWER(COALESCE(s.nombre, '')) LIKE :term)",
         { term },
       );
     }
@@ -105,8 +105,10 @@ export class PerifericosService {
 
     qb.orderBy('p.id_periferico', 'DESC');
 
-    const pagina = params?.pagina && params.pagina > 0 ? Number(params.pagina) : 1;
-    const limite = params?.limite && params.limite > 0 ? Number(params.limite) : 15;
+    const pagina =
+      params?.pagina && params.pagina > 0 ? Number(params.pagina) : 1;
+    const limite =
+      params?.limite && params.limite > 0 ? Number(params.limite) : 15;
 
     const total = await qb.getCount();
     const data = await qb
@@ -263,8 +265,10 @@ export class PerifericosService {
       }
     }
 
-    if (dto.marca_modelo !== undefined) periferico.marca_modelo = dto.marca_modelo.trim();
-    if (dto.condicion_fisica !== undefined) periferico.condicion_fisica = dto.condicion_fisica;
+    if (dto.marca_modelo !== undefined)
+      periferico.marca_modelo = dto.marca_modelo.trim();
+    if (dto.condicion_fisica !== undefined)
+      periferico.condicion_fisica = dto.condicion_fisica;
     if (dto.activo !== undefined) periferico.activo = dto.activo;
 
     const actualizado = await this.perifericoRepo.save(periferico);
@@ -328,7 +332,9 @@ export class PerifericosService {
       valores_anteriores: valoresAnteriores,
       valores_nuevos: {
         id_computadora: actualizado.id_computadora,
-        ubicacion: actualizado.id_computadora ? `PC_${actualizado.id_computadora}` : 'BODEGA',
+        ubicacion: actualizado.id_computadora
+          ? `PC_${actualizado.id_computadora}`
+          : 'BODEGA',
       },
       ip_cliente: ipCliente,
     });

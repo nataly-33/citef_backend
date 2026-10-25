@@ -49,7 +49,8 @@ export class SalasController {
       busqueda,
       piso: piso !== undefined && piso !== '' ? parseInt(piso, 10) : undefined,
       estado_operativo,
-      activo: activo !== undefined && activo !== '' ? activo === 'true' : undefined,
+      activo:
+        activo !== undefined && activo !== '' ? activo === 'true' : undefined,
     });
   }
 
@@ -109,6 +110,11 @@ export class SalasController {
     @Body() dto: GuardarPosicionesComputadorasDto,
     @Req() req: any,
   ) {
-    return this.computadorasService.guardarPosicionesMasivas(id, dto, req.user, req.ip);
+    return this.computadorasService.guardarPosicionesMasivas(
+      id,
+      dto,
+      req.user,
+      req.ip,
+    );
   }
 }
