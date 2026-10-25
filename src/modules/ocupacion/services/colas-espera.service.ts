@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ColaEsperaSala } from '../entities/cola-espera-sala.entity';
@@ -36,11 +42,11 @@ export class ColasEsperaService {
   calcularTiempoEsperaEstimado(c: number, tamanoColaActual: number): number {
     if (c <= 0) return 30; // Fallback razonable
     const mu = 1.0; // 1 sesión promedio por puesto por hora (60 min)
-    
+
     // Tasa efectiva de salida del sistema por hora: c * mu
     // Cada puesto atiende en promedio 1 alumno por hora (o 1 alumno cada 60/c minutos para la sala completa)
     const minutosPorSalidaDePuesto = 60 / (c * mu);
-    
+
     // El tiempo estimado de espera para el nuevo estudiante es proporcional a su posición en la fila
     const tiempoEstimadoMin = (tamanoColaActual + 1) * minutosPorSalidaDePuesto;
     return Math.max(1, Math.round(tiempoEstimadoMin * 10) / 10);
@@ -76,7 +82,10 @@ export class ColasEsperaService {
 
     return cola.map((item, index) => {
       const posicion = index + 1;
-      const tiempoEstimadoMin = Math.max(1, Math.round(posicion * minutosPorSalidaDePuesto * 10) / 10);
+      const tiempoEstimadoMin = Math.max(
+        1,
+        Math.round(posicion * minutosPorSalidaDePuesto * 10) / 10,
+      );
       return {
         ...item,
         posicion,
@@ -85,8 +94,14 @@ export class ColasEsperaService {
     });
   }
 
-  async encolarEstudiante(dto: EncolarEstudianteDto, idUsuarioOperador: number, ip?: string) {
-    const sala = await this.salaRepo.findOne({ where: { id_sala: dto.id_sala } });
+  async encolarEstudiante(
+    dto: EncolarEstudianteDto,
+    idUsuarioOperador: number,
+    ip?: string,
+  ) {
+    const sala = await this.salaRepo.findOne({
+      where: { id_sala: dto.id_sala },
+    });
     if (!sala) {
       throw new NotFoundException(`La sala con ID ${dto.id_sala} no existe`);
     }
@@ -95,11 +110,15 @@ export class ColasEsperaService {
       where: { registro: dto.registro_estudiante.trim() },
     });
     if (!estudiante) {
-      throw new NotFoundException(`El estudiante con RU ${dto.registro_estudiante} no está registrado`);
+      throw new NotFoundException(
+        `El estudiante con RU ${dto.registro_estudiante} no está registrado`,
+      );
     }
 
     if (estudiante.sancionado) {
-      throw new BadRequestException(`El estudiante presenta una sanción o investigación técnica pendiente: ${estudiante.motivo_sancion || 'Sin detalle'}`);
+      throw new BadRequestException(
+        `El estudiante presenta una sanción o investigación técnica pendiente: ${estudiante.motivo_sancion || 'Sin detalle'}`,
+      );
     }
 
     // Verificar si ya tiene sesión activa
@@ -110,7 +129,9 @@ export class ColasEsperaService {
       },
     });
     if (sesionActiva) {
-      throw new ConflictException(`El estudiante ya se encuentra ocupando un puesto en el laboratorio`);
+      throw new ConflictException(
+        `El estudiante ya se encuentra ocupando un puesto en el laboratorio`,
+      );
     }
 
     // Verificar si ya está en la cola de esta sala
@@ -122,7 +143,9 @@ export class ColasEsperaService {
       },
     });
     if (enCola) {
-      throw new ConflictException(`El estudiante ya se encuentra en la cola de espera de este laboratorio`);
+      throw new ConflictException(
+        `El estudiante ya se encuentra en la cola de espera de este laboratorio`,
+      );
     }
 
     // Contar computadoras operativas (c) y cola actual
@@ -141,7 +164,10 @@ export class ColasEsperaService {
       },
     });
 
-    const wqEstimado = this.calcularTiempoEsperaEstimado(servidoresC || 20, colaActual);
+    const wqEstimado = this.calcularTiempoEsperaEstimado(
+      servidoresC || 20,
+      colaActual,
+    );
 
     const nuevoTurno = this.colaRepo.create({
       id_sala: dto.id_sala,
@@ -176,7 +202,11 @@ export class ColasEsperaService {
     const ahora = new Date();
     const minutosReales = Math.max(
       0,
-      Math.round(((ahora.getTime() - new Date(turno.fecha_hora_llegada).getTime()) / 60000) * 10) / 10,
+      Math.round(
+        ((ahora.getTime() - new Date(turno.fecha_hora_llegada).getTime()) /
+          60000) *
+          10,
+      ) / 10,
     );
 
     turno.estado_cola = 'ATENDIDO';

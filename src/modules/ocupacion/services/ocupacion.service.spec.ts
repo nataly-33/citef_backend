@@ -1,5 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { OcupacionService } from './ocupacion.service';
 import { OcupacionGateway } from '../gateways/ocupacion.gateway';
 import { ReservasGateway } from '../../reservas/gateways/reservas.gateway';
@@ -50,7 +54,9 @@ describe('OcupacionService (CU12, CU13, CU14: Ocupación en Tiempo Real)', () =>
     mockSesionRepo = {
       findOne: jest.fn(),
       find: jest.fn().mockResolvedValue([]),
-      save: jest.fn().mockImplementation((s) => Promise.resolve({ id_asignacion: 1, ...s })),
+      save: jest
+        .fn()
+        .mockImplementation((s) => Promise.resolve({ id_asignacion: 1, ...s })),
     };
 
     mockColaRepo = {
@@ -87,8 +93,12 @@ describe('OcupacionService (CU12, CU13, CU14: Ocupación en Tiempo Real)', () =>
             codigo_equipo: 'L1-PC10',
             estado_actual: 'DISPONIBLE',
           }),
-          save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
-          create: jest.fn().mockImplementation((_, data) => ({ id_asignacion: 100, ...data })),
+          save: jest
+            .fn()
+            .mockImplementation((entity) => Promise.resolve(entity)),
+          create: jest
+            .fn()
+            .mockImplementation((_, data) => ({ id_asignacion: 100, ...data })),
         },
       }),
     };
@@ -130,7 +140,9 @@ describe('OcupacionService (CU12, CU13, CU14: Ocupación en Tiempo Real)', () =>
   describe('obtenerEstadoSala (CU12: Monitoreo)', () => {
     it('debe arrojar NotFoundException si la sala no existe', async () => {
       mockSalaRepo.findOne.mockResolvedValue(null);
-      await expect(service.obtenerEstadoSala(999)).rejects.toThrow(NotFoundException);
+      await expect(service.obtenerEstadoSala(999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('debe retornar KPIs y topología si la sala existe', async () => {
@@ -214,7 +226,10 @@ describe('OcupacionService (CU12, CU13, CU14: Ocupación en Tiempo Real)', () =>
       mockSesionRepo.findOne.mockResolvedValue({
         id_asignacion: 5,
         estado: 'EN_CURSO',
-        computadora: { codigo_equipo: 'L2-PC04', sala: { codigo_sala: 'LAB-02' } },
+        computadora: {
+          codigo_equipo: 'L2-PC04',
+          sala: { codigo_sala: 'LAB-02' },
+        },
       });
 
       await expect(
@@ -233,9 +248,9 @@ describe('OcupacionService (CU12, CU13, CU14: Ocupación en Tiempo Real)', () =>
   describe('liberarEquipo (CU14: Checkout y Liberación)', () => {
     it('debe arrojar NotFoundException si la computadora no existe', async () => {
       mockComputadoraRepo.findOne.mockResolvedValue(null);
-      await expect(service.liberarEquipo({ id_computadora: 999 }, 1)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.liberarEquipo({ id_computadora: 999 }, 1),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('debe liberar la computadora y calcular minutos de permanencia', async () => {
@@ -252,7 +267,11 @@ describe('OcupacionService (CU12, CU13, CU14: Ocupación en Tiempo Real)', () =>
         id_asignacion: 1,
         fecha_hora_inicio: new Date(Date.now() - 45 * 60000), // Hace 45 min
         estado: 'EN_CURSO',
-        estudiante: { registro: '220011501', nombres: 'Carlos', apellidos: 'Vargas' },
+        estudiante: {
+          registro: '220011501',
+          nombres: 'Carlos',
+          apellidos: 'Vargas',
+        },
       };
       mockSesionRepo.findOne.mockResolvedValue(sesion);
 

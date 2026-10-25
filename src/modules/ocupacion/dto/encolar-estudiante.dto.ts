@@ -6,6 +6,8 @@ export class EncolarEstudianteDto {
   id_sala: number;
 
   @IsString()
-  @IsNotEmpty({ message: 'El registro universitario del estudiante es obligatorio' })
+  @IsNotEmpty({
+    message: 'El registro universitario del estudiante es obligatorio',
+  })
   registro_estudiante: string;
 }

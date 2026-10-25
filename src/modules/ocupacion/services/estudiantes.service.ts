@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, ConflictException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, ILike } from 'typeorm';
 import { Estudiante } from '../entities/estudiante.entity';
@@ -25,7 +31,9 @@ export class EstudiantesService {
     });
 
     if (!estudiante) {
-      throw new NotFoundException(`No se encontró ningún estudiante con el registro ${registro}`);
+      throw new NotFoundException(
+        `No se encontró ningún estudiante con el registro ${registro}`,
+      );
     }
 
     // Verificar si tiene sesión activa
@@ -67,17 +75,25 @@ export class EstudiantesService {
       .getMany();
   }
 
-  async registrarEstudiante(dto: RegistrarEstudianteDto, idUsuarioOperador: number, ip?: string) {
+  async registrarEstudiante(
+    dto: RegistrarEstudianteDto,
+    idUsuarioOperador: number,
+    ip?: string,
+  ) {
     const existente = await this.estudianteRepo.findOne({
       where: { registro: dto.registro.trim() },
     });
 
     if (existente) {
-      throw new ConflictException(`Ya existe un estudiante registrado con el RU ${dto.registro}`);
+      throw new ConflictException(
+        `Ya existe un estudiante registrado con el RU ${dto.registro}`,
+      );
     }
 
     const correoNormalizado =
-      dto.correo && typeof dto.correo === 'string' && dto.correo.trim().length > 0
+      dto.correo &&
+      typeof dto.correo === 'string' &&
+      dto.correo.trim().length > 0
         ? dto.correo.trim().toLowerCase()
         : null;
 
@@ -111,7 +127,13 @@ export class EstudiantesService {
     return estudianteConCarrera || guardado;
   }
 
-  async alternarSancion(registro: string, sancionado: boolean, motivo: string | null, idUsuarioOperador: number, ip?: string) {
+  async alternarSancion(
+    registro: string,
+    sancionado: boolean,
+    motivo: string | null,
+    idUsuarioOperador: number,
+    ip?: string,
+  ) {
     const estudiante = await this.estudianteRepo.findOne({
       where: { registro: registro.trim() },
     });
@@ -122,13 +144,17 @@ export class EstudiantesService {
 
     const valoresAnteriores = { ...estudiante };
     estudiante.sancionado = sancionado;
-    estudiante.motivo_sancion = sancionado ? (motivo || 'Sanción disciplinaria u objeto extraviado pendiente') : null;
+    estudiante.motivo_sancion = sancionado
+      ? motivo || 'Sanción disciplinaria u objeto extraviado pendiente'
+      : null;
 
     const actualizado = await this.estudianteRepo.save(estudiante);
 
     await this.auditoriaService.registrar({
       id_usuario: idUsuarioOperador,
-      accion: sancionado ? 'SANCIONAR_ESTUDIANTE' : 'LEVANTAR_SANCION_ESTUDIANTE',
+      accion: sancionado
+        ? 'SANCIONAR_ESTUDIANTE'
+        : 'LEVANTAR_SANCION_ESTUDIANTE',
       tabla_afectada: 'estudiante',
       id_registro_afectado: estudiante.registro,
       valores_anteriores: valoresAnteriores,

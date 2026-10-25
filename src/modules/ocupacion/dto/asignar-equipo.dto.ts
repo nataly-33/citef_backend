@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsString, IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AsignarEquipoDto {
@@ -8,12 +14,17 @@ export class AsignarEquipoDto {
   id_sala: number;
 
   @Type(() => Number)
-  @IsNumber({}, { message: 'El id de la computadora debe ser un número válido' })
+  @IsNumber(
+    {},
+    { message: 'El id de la computadora debe ser un número válido' },
+  )
   @IsOptional()
   id_computadora?: number;
 
   @IsString()
-  @IsNotEmpty({ message: 'El registro universitario del estudiante es obligatorio' })
+  @IsNotEmpty({
+    message: 'El registro universitario del estudiante es obligatorio',
+  })
   registro_estudiante: string;
 
   @Type(() => Number)

@@ -16,7 +16,9 @@ import { Logger } from '@nestjs/common';
   },
   namespace: '/ws/ocupacion',
 })
-export class OcupacionGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class OcupacionGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -63,7 +65,10 @@ export class OcupacionGateway implements OnGatewayConnection, OnGatewayDisconnec
     if (this.server) {
       const room = `sala_${id_sala}`;
       this.server.to(room).emit('estado_sala_actualizado', payload);
-      this.server.emit('sala_resumen_actualizado', { id_sala, timestamp: new Date() });
+      this.server.emit('sala_resumen_actualizado', {
+        id_sala,
+        timestamp: new Date(),
+      });
     }
   }
 }

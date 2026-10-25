@@ -29,7 +29,10 @@ export class AsignacionSesion {
   @Column({ type: 'varchar', length: 20 })
   registro_estudiante: string;
 
-  @ManyToOne(() => Estudiante, (e) => e.sesiones, { eager: true, onDelete: 'RESTRICT' })
+  @ManyToOne(() => Estudiante, (e) => e.sesiones, {
+    eager: true,
+    onDelete: 'RESTRICT',
+  })
   @JoinColumn({ name: 'registro_estudiante' })
   estudiante: Estudiante;
 

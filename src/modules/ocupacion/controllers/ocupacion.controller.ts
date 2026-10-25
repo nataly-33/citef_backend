@@ -69,9 +69,15 @@ export class OcupacionController {
   }
 
   @Post('salas/:id/liberar-por-catedra')
-  @Permisos('TIEMPOREAL_LIBERAR', 'TIEMPOREAL_ASIGNAR', 'RESERVAS_SOLICITAR', 'RESERVAS_GESTIONAR')
+  @Permisos(
+    'TIEMPOREAL_LIBERAR',
+    'TIEMPOREAL_ASIGNAR',
+    'RESERVAS_SOLICITAR',
+    'RESERVAS_GESTIONAR',
+  )
   @ApiOperation({
-    summary: 'CU14: Liberación en lote de todas las sesiones libres activas de una sala por inicio de cátedra docente',
+    summary:
+      'CU14: Liberación en lote de todas las sesiones libres activas de una sala por inicio de cátedra docente',
   })
   async liberarSalaPorCatedra(
     @Param('id', ParseIntPipe) id: number,
@@ -80,13 +86,24 @@ export class OcupacionController {
     @Ip() ip: string,
   ) {
     const idUsuario = req.user?.id_usuario || req.user?.id || 1;
-    return this.ocupacionService.liberarSalaCompletaPorCatedra(id, idUsuario, motivo, ip);
+    return this.ocupacionService.liberarSalaCompletaPorCatedra(
+      id,
+      idUsuario,
+      motivo,
+      ip,
+    );
   }
 
   @Post('salas/:id/finalizar-catedra')
-  @Permisos('TIEMPOREAL_LIBERAR', 'TIEMPOREAL_ASIGNAR', 'RESERVAS_SOLICITAR', 'RESERVAS_GESTIONAR')
+  @Permisos(
+    'TIEMPOREAL_LIBERAR',
+    'TIEMPOREAL_ASIGNAR',
+    'RESERVAS_SOLICITAR',
+    'RESERVAS_GESTIONAR',
+  )
   @ApiOperation({
-    summary: 'CU14/CU16: Finalizar cátedra docente en sala, conmutar reserva a FINALIZADA y restaurar computadoras a DISPONIBLE',
+    summary:
+      'CU14/CU16: Finalizar cátedra docente en sala, conmutar reserva a FINALIZADA y restaurar computadoras a DISPONIBLE',
   })
   async finalizarCatedra(
     @Param('id', ParseIntPipe) id: number,

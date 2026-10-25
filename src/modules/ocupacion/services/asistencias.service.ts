@@ -32,7 +32,9 @@ export class AsistenciasService {
     }
 
     if (filtro.id_carrera) {
-      qb.andWhere('e.id_carrera = :idCarrera', { idCarrera: filtro.id_carrera });
+      qb.andWhere('e.id_carrera = :idCarrera', {
+        idCarrera: filtro.id_carrera,
+      });
     }
 
     if (filtro.id_motivo) {
@@ -87,11 +89,14 @@ export class AsistenciasService {
       estudiante: {
         registro: item.estudiante?.registro,
         ci: item.estudiante?.ci,
-        nombre_completo: `${item.estudiante?.nombres || ''} ${item.estudiante?.apellidos || ''}`.trim(),
+        nombre_completo:
+          `${item.estudiante?.nombres || ''} ${item.estudiante?.apellidos || ''}`.trim(),
         carrera: item.estudiante?.carrera?.nombre || 'General',
       },
       motivo: item.motivo?.descrip || 'Práctica',
-      auxiliar: item.auxiliar ? `${item.auxiliar.nombres} ${item.auxiliar.apellidos}`.trim() : 'Auxiliar',
+      auxiliar: item.auxiliar
+        ? `${item.auxiliar.nombres} ${item.auxiliar.apellidos}`.trim()
+        : 'Auxiliar',
     }));
 
     return {
@@ -103,7 +108,9 @@ export class AsistenciasService {
     };
   }
 
-  async exportarAsistenciasCsv(filtro: ConsultarAsistenciasFiltroDto): Promise<string> {
+  async exportarAsistenciasCsv(
+    filtro: ConsultarAsistenciasFiltroDto,
+  ): Promise<string> {
     filtro.limit = 5000; // Límite amplio para exportación
     filtro.page = 1;
     const resultado = await this.consultarAsistencias(filtro);
@@ -142,7 +149,10 @@ export class AsistenciasService {
       r.asignacion_automatica ? 'Automatica (Balanceada)' : 'Manual',
     ]);
 
-    const csvContent = [headers.join(','), ...rows.map((row) => row.join(','))].join('\n');
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.join(',')),
+    ].join('\n');
     return csvContent;
   }
 }

@@ -46,4 +46,3 @@ export class RegistrarEstudianteDto {
   @IsNotEmpty({ message: 'La carrera es obligatoria' })
   id_carrera: number;
 }
-

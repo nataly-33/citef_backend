@@ -13,7 +13,10 @@ import { Estudiante } from '../entities/estudiante.entity';
 import { AsignacionSesion } from '../entities/asignacion-sesion.entity';
 import { ColaEsperaSala } from '../entities/cola-espera-sala.entity';
 import { MotivoUso } from '../../catalogos/entities/motivo-uso.entity';
-import { ReservaSala, EstadoReserva } from '../../reservas/entities/reserva-sala.entity';
+import {
+  ReservaSala,
+  EstadoReserva,
+} from '../../reservas/entities/reserva-sala.entity';
 import { ReservasGateway } from '../../reservas/gateways/reservas.gateway';
 import { AsignarEquipoDto } from '../dto/asignar-equipo.dto';
 import { LiberarEquipoDto } from '../dto/liberar-equipo.dto';
@@ -92,7 +95,9 @@ export class OcupacionService {
       if (sesion && sesion.fecha_hora_inicio) {
         minutosTranscurridos = Math.max(
           1,
-          Math.floor((ahora - new Date(sesion.fecha_hora_inicio).getTime()) / 60000),
+          Math.floor(
+            (ahora - new Date(sesion.fecha_hora_inicio).getTime()) / 60000,
+          ),
         );
       }
 
@@ -110,10 +115,13 @@ export class OcupacionService {
           ? {
               id_asignacion: Number(sesion.id_asignacion),
               registro_estudiante: sesion.registro_estudiante,
-              estudiante_nombres: `${sesion.estudiante?.nombres || ''} ${sesion.estudiante?.apellidos || ''}`.trim(),
+              estudiante_nombres:
+                `${sesion.estudiante?.nombres || ''} ${sesion.estudiante?.apellidos || ''}`.trim(),
               carrera_nombre: sesion.estudiante?.carrera?.nombre || 'General',
               motivo_descrip: sesion.motivo?.descrip || 'Práctica',
-              auxiliar_nombre: sesion.auxiliar ? `${sesion.auxiliar.nombres} ${sesion.auxiliar.apellidos}`.trim() : 'Auxiliar',
+              auxiliar_nombre: sesion.auxiliar
+                ? `${sesion.auxiliar.nombres} ${sesion.auxiliar.apellidos}`.trim()
+                : 'Auxiliar',
               fecha_hora_inicio: sesion.fecha_hora_inicio,
               minutos_transcurridos: minutosTranscurridos,
               asignacion_automatica: sesion.asignacion_automatica,
@@ -125,13 +133,26 @@ export class OcupacionService {
     // Puestos de estudiantes (excluyendo máquina docente de las métricas)
     const puestosAlumnos = puestosConDetalle.filter((p) => !p.maquina_docente);
     const totalPuestos = puestosAlumnos.length;
-    const disponibles = puestosAlumnos.filter((p) => p.estado_actual === 'DISPONIBLE').length;
-    const ocupadas = puestosAlumnos.filter((p) => p.estado_actual === 'OCUPADA').length;
-    const reservadas = puestosAlumnos.filter((p) => p.estado_actual === 'RESERVADA').length;
-    const enClase = puestosAlumnos.filter((p) => p.estado_actual === 'EN_CLASE').length;
-    const mantenimiento = puestosAlumnos.filter((p) => p.estado_actual === 'EN_MANTENIMIENTO').length;
+    const disponibles = puestosAlumnos.filter(
+      (p) => p.estado_actual === 'DISPONIBLE',
+    ).length;
+    const ocupadas = puestosAlumnos.filter(
+      (p) => p.estado_actual === 'OCUPADA',
+    ).length;
+    const reservadas = puestosAlumnos.filter(
+      (p) => p.estado_actual === 'RESERVADA',
+    ).length;
+    const enClase = puestosAlumnos.filter(
+      (p) => p.estado_actual === 'EN_CLASE',
+    ).length;
+    const mantenimiento = puestosAlumnos.filter(
+      (p) => p.estado_actual === 'EN_MANTENIMIENTO',
+    ).length;
 
-    const porcentajeOcupacion = totalPuestos > 0 ? Math.round(((ocupadas + enClase) / totalPuestos) * 100) : 0;
+    const porcentajeOcupacion =
+      totalPuestos > 0
+        ? Math.round(((ocupadas + enClase) / totalPuestos) * 100)
+        : 0;
     const saturada = porcentajeOcupacion >= 90;
 
     const colaPendiente = await this.colaRepo.count({
@@ -190,14 +211,20 @@ export class OcupacionService {
   /**
    * Asigna un puesto de cómputo a un estudiante (manual o balanceado)
    */
-  async asignarEquipo(dto: AsignarEquipoDto, idUsuarioAuxiliar: number, ip?: string) {
+  async asignarEquipo(
+    dto: AsignarEquipoDto,
+    idUsuarioAuxiliar: number,
+    ip?: string,
+  ) {
     // 1. Validar estudiante
     const estudiante = await this.estudianteRepo.findOne({
       where: { registro: dto.registro_estudiante.trim() },
     });
 
     if (!estudiante) {
-      throw new NotFoundException(`El estudiante con registro ${dto.registro_estudiante} no se encuentra registrado en el sistema`);
+      throw new NotFoundException(
+        `El estudiante con registro ${dto.registro_estudiante} no se encuentra registrado en el sistema`,
+      );
     }
 
     if (estudiante.sancionado) {
@@ -228,23 +255,35 @@ export class OcupacionService {
     if (esAutomatica) {
       equipoDestino = await this.sugerirEquipoBalanceado(dto.id_sala);
       if (!equipoDestino) {
-        throw new BadRequestException('No hay puestos de cómputo disponibles en esta sala');
+        throw new BadRequestException(
+          'No hay puestos de cómputo disponibles en esta sala',
+        );
       }
     } else {
       equipoDestino = await this.computadoraRepo.findOne({
-        where: { id_computadora: dto.id_computadora, id_sala: dto.id_sala, activo: true },
+        where: {
+          id_computadora: dto.id_computadora,
+          id_sala: dto.id_sala,
+          activo: true,
+        },
       });
 
       if (!equipoDestino) {
-        throw new NotFoundException('La computadora seleccionada no existe en este laboratorio');
+        throw new NotFoundException(
+          'La computadora seleccionada no existe en este laboratorio',
+        );
       }
 
       if (equipoDestino.maquina_docente) {
-        throw new BadRequestException('La estación docente no puede asignarse a sesiones de alumnos libres');
+        throw new BadRequestException(
+          'La estación docente no puede asignarse a sesiones de alumnos libres',
+        );
       }
 
       if (equipoDestino.estado_actual !== 'DISPONIBLE') {
-        throw new ConflictException('El equipo acaba de ser asignado por otro operador o no se encuentra disponible');
+        throw new ConflictException(
+          'El equipo acaba de ser asignado por otro operador o no se encuentra disponible',
+        );
       }
     }
 
@@ -261,7 +300,9 @@ export class OcupacionService {
       });
 
       if (!pcBloqueada || pcBloqueada.estado_actual !== 'DISPONIBLE') {
-        throw new ConflictException('El puesto de cómputo no se encuentra disponible en este instante');
+        throw new ConflictException(
+          'El puesto de cómputo no se encuentra disponible en este instante',
+        );
       }
 
       // Actualizar estado de computadora
@@ -294,7 +335,11 @@ export class OcupacionService {
         const ahora = new Date();
         const esperaReal = Math.max(
           0,
-          Math.round(((ahora.getTime() - new Date(enCola.fecha_hora_llegada).getTime()) / 60000) * 10) / 10,
+          Math.round(
+            ((ahora.getTime() - new Date(enCola.fecha_hora_llegada).getTime()) /
+              60000) *
+              10,
+          ) / 10,
         );
         enCola.estado_cola = 'ATENDIDO';
         enCola.fecha_hora_atencion = ahora;
@@ -340,14 +385,20 @@ export class OcupacionService {
   /**
    * Libera un puesto de cómputo ocupado, acumula horas y alerta sobre la cola
    */
-  async liberarEquipo(dto: LiberarEquipoDto, idUsuarioAuxiliar: number, ip?: string) {
+  async liberarEquipo(
+    dto: LiberarEquipoDto,
+    idUsuarioAuxiliar: number,
+    ip?: string,
+  ) {
     const pc = await this.computadoraRepo.findOne({
       where: { id_computadora: dto.id_computadora },
       relations: { sala: true },
     });
 
     if (!pc) {
-      throw new NotFoundException(`La computadora con ID ${dto.id_computadora} no existe`);
+      throw new NotFoundException(
+        `La computadora con ID ${dto.id_computadora} no existe`,
+      );
     }
 
     const sesionActiva = await this.sesionRepo.findOne({
@@ -375,7 +426,10 @@ export class OcupacionService {
     const ahora = new Date();
     const minutosUso = Math.max(
       1,
-      Math.round((ahora.getTime() - new Date(sesionActiva.fecha_hora_inicio).getTime()) / 60000),
+      Math.round(
+        (ahora.getTime() - new Date(sesionActiva.fecha_hora_inicio).getTime()) /
+          60000,
+      ),
     );
 
     const horasAdicionales = minutosUso / 60.0;
@@ -401,7 +455,9 @@ export class OcupacionService {
       if (pcActual) {
         pcActual.estado_actual = 'DISPONIBLE';
         pcActual.horas_uso_acumuladas = Number(
-          (Number(pcActual.horas_uso_acumuladas || 0) + horasAdicionales).toFixed(2),
+          (
+            Number(pcActual.horas_uso_acumuladas || 0) + horasAdicionales
+          ).toFixed(2),
         );
         await queryRunner.manager.save(pcActual);
       }
@@ -461,13 +517,15 @@ export class OcupacionService {
       throw new NotFoundException(`La sala con ID ${idSala} no existe`);
     }
 
-    const hoyStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/La_Paz' }).format(new Date());
+    const hoyStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/La_Paz',
+    }).format(new Date());
 
     // Buscar reserva aprobada de hoy para esta sala (o la más próxima aprobada)
     let reservaAprobada = await this.reservaRepo.findOne({
       where: {
         id_sala: idSala,
-        fecha_reserva: hoyStr as any,
+        fecha_reserva: hoyStr,
         estado: EstadoReserva.APROBADA,
       },
       order: { hora_inicio: 'ASC' },
@@ -510,19 +568,27 @@ export class OcupacionService {
         for (const sesion of sesionesActivas) {
           const minutosUso = Math.max(
             1,
-            Math.round((ahora.getTime() - new Date(sesion.fecha_hora_inicio).getTime()) / 60000),
+            Math.round(
+              (ahora.getTime() - new Date(sesion.fecha_hora_inicio).getTime()) /
+                60000,
+            ),
           );
           const horasAdicionales = minutosUso / 60.0;
 
           sesion.fecha_hora_fin = ahora;
           sesion.minutos_permanencia = minutosUso;
           sesion.estado = 'CONCLUIDA';
-          sesion.observaciones = motivo || 'Salida anticipada automática por inicio de cátedra reservada';
+          sesion.observaciones =
+            motivo ||
+            'Salida anticipada automática por inicio de cátedra reservada';
           await queryRunner.manager.save(sesion);
 
           if (sesion.computadora) {
             sesion.computadora.horas_uso_acumuladas = Number(
-              (Number(sesion.computadora.horas_uso_acumuladas || 0) + horasAdicionales).toFixed(2),
+              (
+                Number(sesion.computadora.horas_uso_acumuladas || 0) +
+                horasAdicionales
+              ).toFixed(2),
             );
           }
           countLiberadas++;
@@ -550,7 +616,9 @@ export class OcupacionService {
         id_usuario: idUsuarioAuxiliar,
         accion: 'INICIAR_CATEDRA_SALA',
         tabla_afectada: 'reserva_sala',
-        id_registro_afectado: reservaAprobada ? String(reservaAprobada.id_reserva) : `sala_${idSala}`,
+        id_registro_afectado: reservaAprobada
+          ? String(reservaAprobada.id_reserva)
+          : `sala_${idSala}`,
         valores_anteriores: { estado_reserva: EstadoReserva.APROBADA },
         valores_nuevos: {
           estado_reserva: EstadoReserva.EN_CURSO,
@@ -625,8 +693,9 @@ export class OcupacionService {
         reservaEnCurso.estado = EstadoReserva.FINALIZADA;
         if (motivo) {
           reservaEnCurso.obs_resolucion =
-            (reservaEnCurso.obs_resolucion ? `${reservaEnCurso.obs_resolucion} | ` : '') +
-            `Finalizada: ${motivo.trim()}`;
+            (reservaEnCurso.obs_resolucion
+              ? `${reservaEnCurso.obs_resolucion} | `
+              : '') + `Finalizada: ${motivo.trim()}`;
         }
         await queryRunner.manager.save(reservaEnCurso);
       }
@@ -638,7 +707,9 @@ export class OcupacionService {
         id_usuario: idUsuarioAuxiliar,
         accion: 'FINALIZAR_CATEDRA_SALA',
         tabla_afectada: 'reserva_sala',
-        id_registro_afectado: reservaEnCurso ? String(reservaEnCurso.id_reserva) : `sala_${idSala}`,
+        id_registro_afectado: reservaEnCurso
+          ? String(reservaEnCurso.id_reserva)
+          : `sala_${idSala}`,
         valores_anteriores: { estado_reserva: EstadoReserva.EN_CURSO },
         valores_nuevos: {
           estado_reserva: EstadoReserva.FINALIZADA,
