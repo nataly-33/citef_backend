@@ -77,51 +77,161 @@ export class SeedService implements OnApplicationBootstrap {
   private async seedPermisos() {
     const catalogoPermisos = [
       // Módulo 1: Seguridad y Acceso
-      { codigo: 'SEG_USUARIOS_VER', modulo: 'Seguridad', descrip: 'Consultar listado de usuarios' },
-      { codigo: 'SEG_USUARIOS_CREAR', modulo: 'Seguridad', descrip: 'Crear nuevos usuarios institucionales' },
-      { codigo: 'SEG_USUARIOS_EDITAR', modulo: 'Seguridad', descrip: 'Modificar y cambiar estado de usuarios' },
-      { codigo: 'SEG_ROLES_GESTIONAR', modulo: 'Seguridad', descrip: 'Crear roles y administrar matriz RBAC' },
-      { codigo: 'SEG_AUDITORIA_VER', modulo: 'Seguridad', descrip: 'Visualizar bitácora de auditoría' },
+      {
+        codigo: 'SEG_USUARIOS_VER',
+        modulo: 'Seguridad',
+        descrip: 'Consultar listado de usuarios',
+      },
+      {
+        codigo: 'SEG_USUARIOS_CREAR',
+        modulo: 'Seguridad',
+        descrip: 'Crear nuevos usuarios institucionales',
+      },
+      {
+        codigo: 'SEG_USUARIOS_EDITAR',
+        modulo: 'Seguridad',
+        descrip: 'Modificar y cambiar estado de usuarios',
+      },
+      {
+        codigo: 'SEG_ROLES_GESTIONAR',
+        modulo: 'Seguridad',
+        descrip: 'Crear roles y administrar matriz RBAC',
+      },
+      {
+        codigo: 'SEG_AUDITORIA_VER',
+        modulo: 'Seguridad',
+        descrip: 'Visualizar bitácora de auditoría',
+      },
 
       // Módulo 2: Catálogos y Parámetros
-      { codigo: 'CAT_ACADEMICOS_GESTIONAR', modulo: 'Catálogos', descrip: 'Gestionar carreras, semestres y materias' },
-      { codigo: 'CAT_HORARIOS_GESTIONAR', modulo: 'Catálogos', descrip: 'Gestionar motivos y horarios operativos' },
-      { codigo: 'CAT_IMPORTAR_DOCENTES', modulo: 'Catálogos', descrip: 'Carga masiva de docentes por Excel/CSV' },
-      { codigo: 'CAT_ASIGNAR_TURNOS', modulo: 'Catálogos', descrip: 'Asignar horarios semestrales a auxiliares' },
+      {
+        codigo: 'CAT_ACADEMICOS_GESTIONAR',
+        modulo: 'Catálogos',
+        descrip: 'Gestionar carreras, semestres y materias',
+      },
+      {
+        codigo: 'CAT_HORARIOS_GESTIONAR',
+        modulo: 'Catálogos',
+        descrip: 'Gestionar motivos y horarios operativos',
+      },
+      {
+        codigo: 'CAT_IMPORTAR_DOCENTES',
+        modulo: 'Catálogos',
+        descrip: 'Carga masiva de docentes por Excel/CSV',
+      },
+      {
+        codigo: 'CAT_ASIGNAR_TURNOS',
+        modulo: 'Catálogos',
+        descrip: 'Asignar horarios semestrales a auxiliares',
+      },
 
       // Módulo 3: Infraestructura y Recursos
-      { codigo: 'INFRA_LABS_GESTIONAR', modulo: 'Infraestructura', descrip: 'Gestionar laboratorios' },
-      { codigo: 'INFRA_SALAS_CONFIGURAR', modulo: 'Infraestructura', descrip: 'Configurar cuadrícula y planos de sala' },
-      { codigo: 'INFRA_INVENTARIO_GESTIONAR', modulo: 'Infraestructura', descrip: 'Controlar inventario de periféricos' },
+      {
+        codigo: 'INFRA_LABS_GESTIONAR',
+        modulo: 'Infraestructura',
+        descrip: 'Gestionar laboratorios',
+      },
+      {
+        codigo: 'INFRA_SALAS_CONFIGURAR',
+        modulo: 'Infraestructura',
+        descrip: 'Configurar cuadrícula y planos de sala',
+      },
+      {
+        codigo: 'INFRA_INVENTARIO_GESTIONAR',
+        modulo: 'Infraestructura',
+        descrip: 'Controlar inventario de periféricos',
+      },
 
       // Módulo 4: Ocupación en Tiempo Real
-      { codigo: 'TIEMPOREAL_MONITOREAR', modulo: 'Ocupación', descrip: 'Monitorear dashboard síncrono de salas' },
-      { codigo: 'TIEMPOREAL_ASIGNAR', modulo: 'Ocupación', descrip: 'Asignar equipos con algoritmo de colas' },
-      { codigo: 'TIEMPOREAL_LIBERAR', modulo: 'Ocupación', descrip: 'Liberar puestos y registrar checkout' },
-      { codigo: 'TIEMPOREAL_ASISTENCIAS', modulo: 'Ocupación', descrip: 'Consultar histórico de asistencias' },
+      {
+        codigo: 'TIEMPOREAL_MONITOREAR',
+        modulo: 'Ocupación',
+        descrip: 'Monitorear dashboard síncrono de salas',
+      },
+      {
+        codigo: 'TIEMPOREAL_ASIGNAR',
+        modulo: 'Ocupación',
+        descrip: 'Asignar equipos con algoritmo de colas',
+      },
+      {
+        codigo: 'TIEMPOREAL_LIBERAR',
+        modulo: 'Ocupación',
+        descrip: 'Liberar puestos y registrar checkout',
+      },
+      {
+        codigo: 'TIEMPOREAL_ASISTENCIAS',
+        modulo: 'Ocupación',
+        descrip: 'Consultar histórico de asistencias',
+      },
 
       // Módulo 5: Reservas Académicas
-      { codigo: 'RESERVAS_SOLICITAR', modulo: 'Reservas', descrip: 'Solicitar reserva de salas' },
-      { codigo: 'RESERVAS_CONSULTAR', modulo: 'Reservas', descrip: 'Consultar estado y calendario de reservas' },
-      { codigo: 'RESERVAS_CANCELAR', modulo: 'Reservas', descrip: 'Cancelar reservas no ejecutadas' },
-      { codigo: 'RESERVAS_GESTIONAR', modulo: 'Reservas', descrip: 'Aprobar o rechazar reservas por jefatura' },
+      {
+        codigo: 'RESERVAS_SOLICITAR',
+        modulo: 'Reservas',
+        descrip: 'Solicitar reserva de salas',
+      },
+      {
+        codigo: 'RESERVAS_CONSULTAR',
+        modulo: 'Reservas',
+        descrip: 'Consultar estado y calendario de reservas',
+      },
+      {
+        codigo: 'RESERVAS_CANCELAR',
+        modulo: 'Reservas',
+        descrip: 'Cancelar reservas no ejecutadas',
+      },
+      {
+        codigo: 'RESERVAS_GESTIONAR',
+        modulo: 'Reservas',
+        descrip: 'Aprobar o rechazar reservas por jefatura',
+      },
 
       // Módulo 6: Turnos e Incidencias
-      { codigo: 'TURNOS_APERTURA_CIERRE', modulo: 'Turnos', descrip: 'Apertura y cierre de guardia con acta relevo' },
-      { codigo: 'TURNOS_INCIDENCIAS_REPORTAR', modulo: 'Turnos', descrip: 'Reportar fallas técnicas de estudiantes' },
-      { codigo: 'TURNOS_OBJETOS_EXTRAVIADOS', modulo: 'Turnos', descrip: 'Custodia y entrega de objetos extraviados' },
+      {
+        codigo: 'TURNOS_APERTURA_CIERRE',
+        modulo: 'Turnos',
+        descrip: 'Apertura y cierre de guardia con acta relevo',
+      },
+      {
+        codigo: 'TURNOS_INCIDENCIAS_REPORTAR',
+        modulo: 'Turnos',
+        descrip: 'Reportar fallas técnicas de estudiantes',
+      },
+      {
+        codigo: 'TURNOS_OBJETOS_EXTRAVIADOS',
+        modulo: 'Turnos',
+        descrip: 'Custodia y entrega de objetos extraviados',
+      },
 
       // Módulo 7: Soporte Técnico
-      { codigo: 'SOPORTE_MANTENIMIENTO_REGISTRAR', modulo: 'Soporte', descrip: 'Registrar órdenes de trabajo en taller' },
-      { codigo: 'SOPORTE_RETORNO_CONFIRMAR', modulo: 'Soporte', descrip: 'Confirmar retorno y puesta en marcha' },
+      {
+        codigo: 'SOPORTE_MANTENIMIENTO_REGISTRAR',
+        modulo: 'Soporte',
+        descrip: 'Registrar órdenes de trabajo en taller',
+      },
+      {
+        codigo: 'SOPORTE_RETORNO_CONFIRMAR',
+        modulo: 'Soporte',
+        descrip: 'Confirmar retorno y puesta en marcha',
+      },
 
       // Módulo 8: Analítica Predictiva y Reportes
-      { codigo: 'REPORTES_PREDICTIVOS', modulo: 'Analítica', descrip: 'Generar pronósticos con Machine Learning' },
-      { codigo: 'REPORTES_DINAMICOS', modulo: 'Analítica', descrip: 'Reportes ejecutivos para acreditación' },
+      {
+        codigo: 'REPORTES_PREDICTIVOS',
+        modulo: 'Analítica',
+        descrip: 'Generar pronósticos con Machine Learning',
+      },
+      {
+        codigo: 'REPORTES_DINAMICOS',
+        modulo: 'Analítica',
+        descrip: 'Reportes ejecutivos para acreditación',
+      },
     ];
 
     for (const p of catalogoPermisos) {
-      const existe = await this.permisoRepo.findOne({ where: { codigo: p.codigo } });
+      const existe = await this.permisoRepo.findOne({
+        where: { codigo: p.codigo },
+      });
       if (!existe) {
         await this.permisoRepo.save(this.permisoRepo.create(p));
       }
@@ -134,12 +244,14 @@ export class SeedService implements OnApplicationBootstrap {
     const rolesConfig = [
       {
         nombre: 'ADMINISTRADOR',
-        descrip: 'Administrador general del sistema con acceso total a todos los módulos y seguridad',
+        descrip:
+          'Administrador general del sistema con acceso total a todos los módulos y seguridad',
         filtroPermisos: () => true,
       },
       {
         nombre: 'DOCENTE',
-        descrip: 'Docente universitario facultativo con facultades para reservar salas y revisar asistencias',
+        descrip:
+          'Docente universitario facultativo con facultades para reservar salas y revisar asistencias',
         filtroPermisos: (codigo: string) =>
           codigo.startsWith('RESERVAS_') ||
           codigo === 'TIEMPOREAL_ASISTENCIAS' ||
@@ -147,7 +259,8 @@ export class SeedService implements OnApplicationBootstrap {
       },
       {
         nombre: 'AUXILIAR',
-        descrip: 'Auxiliar de sala responsable de asignación de equipos, aperturas de turno e incidencias',
+        descrip:
+          'Auxiliar de sala responsable de asignación de equipos, aperturas de turno e incidencias',
         filtroPermisos: (codigo: string) =>
           codigo.startsWith('TIEMPOREAL_') ||
           codigo.startsWith('TURNOS_') ||
@@ -156,7 +269,8 @@ export class SeedService implements OnApplicationBootstrap {
       },
       {
         nombre: 'TECNICO',
-        descrip: 'Técnico de soporte especializado en mantenimiento de hardware y red en taller',
+        descrip:
+          'Técnico de soporte especializado en mantenimiento de hardware y red en taller',
         filtroPermisos: (codigo: string) =>
           codigo.startsWith('SOPORTE_') ||
           codigo.startsWith('INFRA_') ||
@@ -170,7 +284,9 @@ export class SeedService implements OnApplicationBootstrap {
         relations: { permisos: true },
       });
 
-      const permisosRol = todosLosPermisos.filter((p) => r.filtroPermisos(p.codigo));
+      const permisosRol = todosLosPermisos.filter((p) =>
+        r.filtroPermisos(p.codigo),
+      );
 
       if (!rol) {
         rol = this.rolRepo.create({
@@ -189,10 +305,18 @@ export class SeedService implements OnApplicationBootstrap {
   }
 
   private async seedUsuarios() {
-    const adminRol = await this.rolRepo.findOne({ where: { nombre: 'ADMINISTRADOR' } });
-    const docenteRol = await this.rolRepo.findOne({ where: { nombre: 'DOCENTE' } });
-    const auxiliarRol = await this.rolRepo.findOne({ where: { nombre: 'AUXILIAR' } });
-    const tecnicoRol = await this.rolRepo.findOne({ where: { nombre: 'TECNICO' } });
+    const adminRol = await this.rolRepo.findOne({
+      where: { nombre: 'ADMINISTRADOR' },
+    });
+    const docenteRol = await this.rolRepo.findOne({
+      where: { nombre: 'DOCENTE' },
+    });
+    const auxiliarRol = await this.rolRepo.findOne({
+      where: { nombre: 'AUXILIAR' },
+    });
+    const tecnicoRol = await this.rolRepo.findOne({
+      where: { nombre: 'TECNICO' },
+    });
 
     const usuariosBase = [
       {
@@ -254,7 +378,9 @@ export class SeedService implements OnApplicationBootstrap {
           roles: [u.rol],
         });
         await this.usuarioRepo.save(nuevo);
-        this.logger.log(`Usuario inicial creado: ${u.correo} (Contraseña: ${u.password})`);
+        this.logger.log(
+          `Usuario inicial creado: ${u.correo} (Contraseña: ${u.password})`,
+        );
       }
     }
   }
@@ -290,23 +416,55 @@ export class SeedService implements OnApplicationBootstrap {
       Array<{ sigla: string; nombre: string; semestre_nivel: number }>
     > = {
       '186-5': [
-        { sigla: 'ADM100', nombre: 'Introducción a la Administración', semestre_nivel: 1 },
+        {
+          sigla: 'ADM100',
+          nombre: 'Introducción a la Administración',
+          semestre_nivel: 1,
+        },
         { sigla: 'MAT101', nombre: 'Cálculo I', semestre_nivel: 1 },
-        { sigla: 'COM200', nombre: 'Fundamentos de Marketing', semestre_nivel: 3 },
-        { sigla: 'COM300', nombre: 'Comercio Internacional', semestre_nivel: 5 },
-        { sigla: 'COM400', nombre: 'Investigación de Mercados', semestre_nivel: 7 },
+        {
+          sigla: 'COM200',
+          nombre: 'Fundamentos de Marketing',
+          semestre_nivel: 3,
+        },
+        {
+          sigla: 'COM300',
+          nombre: 'Comercio Internacional',
+          semestre_nivel: 5,
+        },
+        {
+          sigla: 'COM400',
+          nombre: 'Investigación de Mercados',
+          semestre_nivel: 7,
+        },
       ],
       '186-1': [
         { sigla: 'CPA100', nombre: 'Contabilidad Básica I', semestre_nivel: 1 },
-        { sigla: 'CPA200', nombre: 'Contabilidad de Costos', semestre_nivel: 3 },
+        {
+          sigla: 'CPA200',
+          nombre: 'Contabilidad de Costos',
+          semestre_nivel: 3,
+        },
         { sigla: 'CPA300', nombre: 'Auditoría Financiera', semestre_nivel: 5 },
         { sigla: 'CPA400', nombre: 'Gabinete de Auditoría', semestre_nivel: 7 },
       ],
       '186-2': [
         { sigla: 'ADM101', nombre: 'Teoría Administrativa', semestre_nivel: 1 },
-        { sigla: 'ADM200', nombre: 'Organización y Métodos', semestre_nivel: 3 },
-        { sigla: 'ADM300', nombre: 'Gestión del Talento Humano', semestre_nivel: 5 },
-        { sigla: 'ADM400', nombre: 'Estrategia Empresarial', semestre_nivel: 7 },
+        {
+          sigla: 'ADM200',
+          nombre: 'Organización y Métodos',
+          semestre_nivel: 3,
+        },
+        {
+          sigla: 'ADM300',
+          nombre: 'Gestión del Talento Humano',
+          semestre_nivel: 5,
+        },
+        {
+          sigla: 'ADM400',
+          nombre: 'Estrategia Empresarial',
+          semestre_nivel: 7,
+        },
       ],
       '186-3': [
         { sigla: 'ECO100', nombre: 'Microeconomía I', semestre_nivel: 2 },
@@ -316,9 +474,17 @@ export class SeedService implements OnApplicationBootstrap {
       ],
       '186-4': [
         { sigla: 'FIN100', nombre: 'Matemática Financiera', semestre_nivel: 2 },
-        { sigla: 'FIN200', nombre: 'Finanzas Corporativas I', semestre_nivel: 4 },
+        {
+          sigla: 'FIN200',
+          nombre: 'Finanzas Corporativas I',
+          semestre_nivel: 4,
+        },
         { sigla: 'FIN300', nombre: 'Mercado de Valores', semestre_nivel: 6 },
-        { sigla: 'FIN400', nombre: 'Gestión de Riesgos Financieros', semestre_nivel: 8 },
+        {
+          sigla: 'FIN400',
+          nombre: 'Gestión de Riesgos Financieros',
+          semestre_nivel: 8,
+        },
       ],
     };
 
@@ -343,7 +509,10 @@ export class SeedService implements OnApplicationBootstrap {
         }
 
         const existeCM = await this.carreraMateriaRepo.findOne({
-          where: { id_carrera: carrera.id_carrera, id_materia: materia.id_materia },
+          where: {
+            id_carrera: carrera.id_carrera,
+            id_materia: materia.id_materia,
+          },
         });
         if (!existeCM) {
           await this.carreraMateriaRepo.save(
@@ -357,7 +526,9 @@ export class SeedService implements OnApplicationBootstrap {
         }
       }
     }
-    this.logger.log('Materias y mallas curriculares de muestra sembradas para la FCEE.');
+    this.logger.log(
+      'Materias y mallas curriculares de muestra sembradas para la FCEE.',
+    );
   }
 
   private async seedHorarios() {
@@ -379,7 +550,9 @@ export class SeedService implements OnApplicationBootstrap {
           activo: true,
         });
         await this.horarioRepo.save(nuevo);
-        this.logger.log(`Horario operativo creado: ${h.turno} (${h.hora_inicio} - ${h.hora_fin})`);
+        this.logger.log(
+          `Horario operativo creado: ${h.turno} (${h.hora_inicio} - ${h.hora_fin})`,
+        );
       }
     }
   }
@@ -410,8 +583,13 @@ export class SeedService implements OnApplicationBootstrap {
 
   private async seedDocentes() {
     const PASSWORD_GENERICA_DOCENTES = 'Docente.CITEF2026*';
-    const passwordHashDocente = await bcrypt.hash(PASSWORD_GENERICA_DOCENTES, 10);
-    const rolDocente = await this.rolRepo.findOne({ where: { nombre: 'DOCENTE' } });
+    const passwordHashDocente = await bcrypt.hash(
+      PASSWORD_GENERICA_DOCENTES,
+      10,
+    );
+    const rolDocente = await this.rolRepo.findOne({
+      where: { nombre: 'DOCENTE' },
+    });
 
     const docentesMuestra = [
       {
@@ -460,7 +638,9 @@ export class SeedService implements OnApplicationBootstrap {
           activo: true,
         });
         await this.docenteRepo.save(nuevoDocente);
-        this.logger.log(`Docente de muestra registrado: ${d.codigo} (${d.nombres} ${d.apellidos})`);
+        this.logger.log(
+          `Docente de muestra registrado: ${d.codigo} (${d.nombres} ${d.apellidos})`,
+        );
       }
     }
   }
@@ -471,7 +651,9 @@ export class SeedService implements OnApplicationBootstrap {
     const tiposMap = new Map<string, TipoPeriferico>();
 
     for (const t of tipos) {
-      let tipo = await this.tipoPerifericoRepo.findOne({ where: { nombre: t } });
+      let tipo = await this.tipoPerifericoRepo.findOne({
+        where: { nombre: t },
+      });
       if (!tipo) {
         tipo = await this.tipoPerifericoRepo.save(
           this.tipoPerifericoRepo.create({ nombre: t, activo: true }),
@@ -510,9 +692,17 @@ export class SeedService implements OnApplicationBootstrap {
     ];
 
     for (const s of salasData) {
-      let sala = await this.salaRepo.findOne({ where: { codigo_sala: s.codigo_sala } });
+      let sala = await this.salaRepo.findOne({
+        where: { codigo_sala: s.codigo_sala },
+      });
       if (!sala) {
-        sala = await this.salaRepo.save(this.salaRepo.create({ ...s, id_usuario_administrador: 1, activo: true }));
+        sala = await this.salaRepo.save(
+          this.salaRepo.create({
+            ...s,
+            id_usuario_administrador: 1,
+            activo: true,
+          }),
+        );
         this.logger.log(`Sala creada: ${s.codigo_sala} - ${s.nombre}`);
 
         // Si es LAB-01, generar estaciones de trabajo iniciales
@@ -606,7 +796,8 @@ export class SeedService implements OnApplicationBootstrap {
               await this.perifericoInventarioRepo.save(
                 this.perifericoInventarioRepo.create({
                   id_computadora: pc.id_computadora,
-                  id_tipo_periferico: tiposMap.get('MONITOR')!.id_tipo_periferico,
+                  id_tipo_periferico:
+                    tiposMap.get('MONITOR')!.id_tipo_periferico,
                   marca_modelo: 'Samsung LED 22" Full HD',
                   numero_activo: `SAM-LED22-PC0${num}`,
                   condicion_fisica: 'BUENO',
@@ -618,7 +809,8 @@ export class SeedService implements OnApplicationBootstrap {
               await this.perifericoInventarioRepo.save(
                 this.perifericoInventarioRepo.create({
                   id_computadora: pc.id_computadora,
-                  id_tipo_periferico: tiposMap.get('TECLADO')!.id_tipo_periferico,
+                  id_tipo_periferico:
+                    tiposMap.get('TECLADO')!.id_tipo_periferico,
                   marca_modelo: 'Genius Smart KB-100',
                   numero_activo: `GEN-KB-PC0${num}`,
                   condicion_fisica: 'BUENO',
@@ -669,7 +861,8 @@ export class SeedService implements OnApplicationBootstrap {
             await this.perifericoInventarioRepo.save(
               this.perifericoInventarioRepo.create({
                 id_computadora: null,
-                id_tipo_periferico: tiposMap.get('ESTABILIZADOR')!.id_tipo_periferico,
+                id_tipo_periferico:
+                  tiposMap.get('ESTABILIZADOR')!.id_tipo_periferico,
                 marca_modelo: 'Forza FVR-1001 1000VA',
                 numero_activo: 'BOD-EST-001',
                 condicion_fisica: 'BUENO',
@@ -678,7 +871,9 @@ export class SeedService implements OnApplicationBootstrap {
             );
           }
 
-          this.logger.log(`Equipos y periféricos iniciales cargados para ${sala.codigo_sala}`);
+          this.logger.log(
+            `Equipos y periféricos iniciales cargados para ${sala.codigo_sala}`,
+          );
         }
       }
     }
@@ -786,7 +981,8 @@ export class SeedService implements OnApplicationBootstrap {
         correo: 'rodrigo.ortiz@uagrm.edu.bo',
         id_carrera: c4,
         sancionado: true,
-        motivo_sancion: 'Investigación técnica pendiente por avería reportada en teclado de sala',
+        motivo_sancion:
+          'Investigación técnica pendiente por avería reportada en teclado de sala',
       },
       {
         registro: '220011510',
@@ -901,7 +1097,8 @@ export class SeedService implements OnApplicationBootstrap {
       );
     }
 
-    this.logger.log('Sesiones de prueba iniciales (activas e históricas) sembradas.');
+    this.logger.log(
+      'Sesiones de prueba iniciales (activas e históricas) sembradas.',
+    );
   }
 }
-
