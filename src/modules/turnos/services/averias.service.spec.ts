@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { AveriasService } from './averias.service';
 import { AuditoriaService } from '../../auditoria/auditoria.service';
@@ -8,6 +9,12 @@ import {
   EstadoAveria,
 } from '../entities/averia-equipo.entity';
 import { EstadoJornada } from '../entities/jornada-turno.entity';
+import {
+  MantenimientoTaller,
+  EstadoMantenimiento,
+  TipoMantenimiento,
+  PrioridadMantenimiento,
+} from '../../soporte/entities/mantenimiento-taller.entity';
 
 describe('AveriasService (CU22: Reporte de Averías e Incidencias Técnicas)', () => {
   let service: AveriasService;
@@ -16,6 +23,7 @@ describe('AveriasService (CU22: Reporte de Averías e Incidencias Técnicas)', (
   let mockSesionRepo: any;
   let mockJornadaRepo: any;
   let mockReservaRepo: any;
+  let mockMantenimientoRepo: any;
   let mockAuditoriaService: any;
 
   beforeEach(async () => {
@@ -55,6 +63,19 @@ describe('AveriasService (CU22: Reporte de Averías e Incidencias Técnicas)', (
       findOne: jest.fn(),
     };
 
+    mockMantenimientoRepo = {
+      findOne: jest.fn(),
+      find: jest.fn(),
+      create: jest
+        .fn()
+        .mockImplementation((dto) => ({ id_mantenimiento: 1, ...dto })),
+      save: jest
+        .fn()
+        .mockImplementation((m) =>
+          Promise.resolve({ id_mantenimiento: 1, ...m }),
+        ),
+    };
+
     mockAuditoriaService = {
       registrar: jest.fn().mockResolvedValue({ id_auditoria: 1 }),
     };
@@ -67,6 +88,10 @@ describe('AveriasService (CU22: Reporte de Averías e Incidencias Técnicas)', (
         { provide: 'AsignacionSesionRepository', useValue: mockSesionRepo },
         { provide: 'JornadaTurnoRepository', useValue: mockJornadaRepo },
         { provide: 'ReservaSalaRepository', useValue: mockReservaRepo },
+        {
+          provide: getRepositoryToken(MantenimientoTaller),
+          useValue: mockMantenimientoRepo,
+        },
         { provide: AuditoriaService, useValue: mockAuditoriaService },
       ],
     }).compile();
@@ -193,11 +218,22 @@ describe('AveriasService (CU22: Reporte de Averías e Incidencias Técnicas)', (
   });
 
   describe('cambiarEstadoAveria', () => {
-    it('debe cambiar estado a EN_TALLER', async () => {
+    it('debe cambiar estado a EN_TALLER, crear orden de taller si no existe y conmutar PC a EN_MANTENIMIENTO', async () => {
+      const pcMock = {
+        id_computadora: 5,
+        estado_actual: 'DISPONIBLE',
+      };
+
       mockAveriaRepo.findOne.mockResolvedValue({
         id_averia: 1,
+        id_computadora: 5,
+        descrip_falla: 'Ingresado al taller para cambio de cable flex',
+        gravedad: GravedadAveria.CRITICA,
         estado: EstadoAveria.PENDIENTE_REVISION,
+        computadora: pcMock,
       });
+
+      mockMantenimientoRepo.findOne.mockResolvedValue(null);
 
       const res = await service.cambiarEstadoAveria(
         1,
@@ -210,9 +246,55 @@ describe('AveriasService (CU22: Reporte de Averías e Incidencias Técnicas)', (
       );
 
       expect(res.estado).toBe(EstadoAveria.EN_TALLER);
+      expect(mockMantenimientoRepo.findOne).toHaveBeenCalledWith({
+        where: { id_averia: 1 },
+      });
+      expect(mockMantenimientoRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id_computadora: 5,
+          id_averia: 1,
+          id_usuario_administrador: 5,
+          estado: EstadoMantenimiento.PENDIENTE_TALLER,
+          tipo_mantenimiento: TipoMantenimiento.CORRECTIVO,
+          prioridad: PrioridadMantenimiento.CRITICA,
+          descripcion_problema: 'Ingresado al taller para cambio de cable flex',
+        }),
+      );
+      expect(mockMantenimientoRepo.save).toHaveBeenCalled();
+      expect(pcMock.estado_actual).toBe('EN_MANTENIMIENTO');
+      expect(mockComputadoraRepo.save).toHaveBeenCalledWith(pcMock);
       expect(mockAuditoriaService.registrar).toHaveBeenCalledWith(
         expect.objectContaining({ accion: 'ACTUALIZAR_ESTADO_AVERIA' }),
       );
+    });
+
+    it('no debe duplicar orden de taller si ya existe una para la avería al pasar a EN_TALLER', async () => {
+      const pcMock = {
+        id_computadora: 5,
+        estado_actual: 'EN_MANTENIMIENTO',
+      };
+
+      mockAveriaRepo.findOne.mockResolvedValue({
+        id_averia: 1,
+        id_computadora: 5,
+        descrip_falla: 'Falla existente',
+        gravedad: GravedadAveria.MEDIA,
+        estado: EstadoAveria.PENDIENTE_REVISION,
+        computadora: pcMock,
+      });
+
+      mockMantenimientoRepo.findOne.mockResolvedValue({
+        id_mantenimiento: 10,
+        id_averia: 1,
+      });
+
+      await service.cambiarEstadoAveria(
+        1,
+        { estado: EstadoAveria.EN_TALLER },
+        5,
+      );
+
+      expect(mockMantenimientoRepo.create).not.toHaveBeenCalled();
     });
 
     it('debe restablecer computadora a DISPONIBLE al marcar REPARADO', async () => {

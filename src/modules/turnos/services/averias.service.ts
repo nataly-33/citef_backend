@@ -10,6 +10,12 @@ import { Computadora } from '../../infraestructura/entities/computadora.entity';
 import { AsignacionSesion } from '../../ocupacion/entities/asignacion-sesion.entity';
 import { JornadaTurno, EstadoJornada } from '../entities/jornada-turno.entity';
 import { ReservaSala } from '../../reservas/entities/reserva-sala.entity';
+import {
+  MantenimientoTaller,
+  EstadoMantenimiento,
+  TipoMantenimiento,
+  PrioridadMantenimiento,
+} from '../../soporte/entities/mantenimiento-taller.entity';
 import { AuditoriaService } from '../../auditoria/auditoria.service';
 import { ReportarAveriaDto } from '../dto/reportar-averia.dto';
 import { ActualizarAveriaDto } from '../dto/actualizar-averia.dto';
@@ -28,6 +34,8 @@ export class AveriasService {
     private readonly jornadaRepo: Repository<JornadaTurno>,
     @InjectRepository(ReservaSala)
     private readonly reservaRepo: Repository<ReservaSala>,
+    @InjectRepository(MantenimientoTaller)
+    private readonly mantenimientoRepo: Repository<MantenimientoTaller>,
     private readonly auditoriaService: AuditoriaService,
   ) {}
 
@@ -194,7 +202,37 @@ export class AveriasService {
       averia.solucion_tecnica = dto.solucion_tecnica;
     }
 
-    if (dto.estado === EstadoAveria.REPARADO) {
+    if (dto.estado === EstadoAveria.EN_TALLER) {
+      const ordenExistente = await this.mantenimientoRepo.findOne({
+        where: { id_averia: averia.id_averia },
+      });
+
+      if (!ordenExistente) {
+        const prioridad =
+          averia.gravedad === GravedadAveria.CRITICA
+            ? PrioridadMantenimiento.CRITICA
+            : averia.gravedad === GravedadAveria.BAJA
+              ? PrioridadMantenimiento.BAJA
+              : PrioridadMantenimiento.MEDIA;
+
+        const nuevaOrden = this.mantenimientoRepo.create({
+          id_computadora: averia.id_computadora,
+          id_averia: averia.id_averia,
+          id_usuario_administrador: idUsuario,
+          estado: EstadoMantenimiento.PENDIENTE_TALLER,
+          tipo_mantenimiento: TipoMantenimiento.CORRECTIVO,
+          prioridad,
+          descripcion_problema: averia.descrip_falla,
+          fecha_hora_ingreso: new Date(),
+        });
+        await this.mantenimientoRepo.save(nuevaOrden);
+      }
+
+      if (averia.computadora) {
+        averia.computadora.estado_actual = 'EN_MANTENIMIENTO';
+        await this.computadoraRepo.save(averia.computadora);
+      }
+    } else if (dto.estado === EstadoAveria.REPARADO) {
       averia.fecha_solucion = new Date();
       if (averia.computadora) {
         averia.computadora.estado_actual = 'DISPONIBLE';

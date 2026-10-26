@@ -11,6 +11,7 @@ import { Estudiante } from '../ocupacion/entities/estudiante.entity';
 import { ReservaSala } from '../reservas/entities/reserva-sala.entity';
 import { Usuario } from '../usuarios/entities/usuario.entity';
 import { AsignarTurno } from '../catalogos/entities/asignar-turno.entity';
+import { MantenimientoTaller } from '../soporte/entities/mantenimiento-taller.entity';
 import { AuditoriaModule } from '../auditoria/auditoria.module';
 import { TurnosService } from './services/turnos.service';
 import { AveriasService } from './services/averias.service';
@@ -33,6 +34,7 @@ import { ObjetosExtraviadosController } from './controllers/objetos-extraviados.
       ReservaSala,
       Usuario,
       AsignarTurno,
+      MantenimientoTaller,
     ]),
     AuditoriaModule,
   ],

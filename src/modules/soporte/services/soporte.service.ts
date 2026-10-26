@@ -119,7 +119,11 @@ export class SoporteService {
   /**
    * CU24: Listar órdenes de taller con soporte dual de paginación (page/limit y pagina/limite) y filtros
    */
-  async getOrdenesTaller(params: FiltroMantenimientoDto) {
+  async getOrdenesTaller(
+    params: FiltroMantenimientoDto,
+    idUsuario?: number,
+    roles?: string[],
+  ) {
     const pagina = Number(params.page || params.pagina || 1);
     const limite = Number(params.limit || params.limite || 15);
     const skip = (pagina - 1) * limite;
@@ -133,6 +137,12 @@ export class SoporteService {
       .leftJoinAndSelect('m.averia', 'av')
       .leftJoinAndSelect('m.confirmacion_retorno', 'cr')
       .leftJoinAndSelect('cr.usuario_confirma', 'uc');
+
+    const esAdmin = roles?.some((r) => r.toUpperCase() === 'ADMINISTRADOR');
+    const esTecnico = roles?.some((r) => r.toUpperCase() === 'TECNICO');
+    if (esTecnico && !esAdmin && idUsuario) {
+      qb.andWhere('m.id_usuario_tecnico = :idTecnico', { idTecnico: idUsuario });
+    }
 
     if (params.id_sala) {
       qb.andWhere('c.id_sala = :idSala', { idSala: params.id_sala });
@@ -519,5 +529,23 @@ export class SoporteService {
       return this.metricasRamsService.calcularMetricasSala(idSala, mes, anio);
     }
     return this.metricasRamsService.getDashboardRAMS({ mes, anio });
+  }
+
+  /**
+   * Obtener listado de usuarios con rol TÉCNICO activos
+   */
+  async getTecnicos(): Promise<Usuario[]> {
+    const tecnicos = await this.usuarioRepo
+      .createQueryBuilder('u')
+      .innerJoin('u.roles', 'r')
+      .where('r.nombre = :rol', { rol: 'TECNICO' })
+      .andWhere('u.activo = :activo', { activo: true })
+      .orderBy('u.nombres', 'ASC')
+      .getMany();
+
+    return tecnicos.map((t) => {
+      const { password_hash: _password_hash, ...uRest } = t;
+      return uRest as Usuario;
+    });
   }
 }

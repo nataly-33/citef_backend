@@ -55,14 +55,28 @@ export class SoporteController {
     return this.soporteService.crearOrdenTaller(dto, idUsuario, ip);
   }
 
+  @Get('tecnicos')
+  @Permisos('ver_soporte_taller', 'administrar_turnos_guardia')
+  @ApiOperation({
+    summary: 'Obtener lista de técnicos activos',
+  })
+  async getTecnicos() {
+    return this.soporteService.getTecnicos();
+  }
+
   @Get('taller')
   @Permisos('SOPORTE_MANTENIMIENTO_REGISTRAR')
   @ApiOperation({
     summary:
       'CU24: Listar órdenes de taller con soporte dual de paginación (page/limit y pagina/limite)',
   })
-  async getOrdenes(@Query() params: FiltroMantenimientoDto) {
-    return this.soporteService.getOrdenesTaller(params);
+  async getOrdenes(
+    @Query() params: FiltroMantenimientoDto,
+    @Req() req: any,
+  ) {
+    const idUsuario = req.user?.id_usuario;
+    const roles = req.user?.roles || [];
+    return this.soporteService.getOrdenesTaller(params, idUsuario, roles);
   }
 
   @Get('taller/:id')

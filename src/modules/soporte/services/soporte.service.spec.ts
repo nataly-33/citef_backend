@@ -32,8 +32,30 @@ describe('SoporteService (CU24: Mantenimiento en Taller & CU25: Retorno y RAMS)'
   let mockAuditoriaService: any;
   let mockMetricasRamsService: any;
   let mockOcupacionGateway: any;
+  let mockMantenimientoQb: any;
+  let mockUsuarioQb: any;
 
   beforeEach(async () => {
+    mockMantenimientoQb = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getManyAndCount: jest.fn().mockResolvedValue([
+        [
+          {
+            id_mantenimiento: 1,
+            id_computadora: 5,
+            estado: EstadoMantenimiento.PENDIENTE_TALLER,
+            fecha_hora_ingreso: new Date(),
+          },
+        ],
+        1,
+      ]),
+    };
+
     mockMantenimientoRepo = {
       findOne: jest.fn(),
       find: jest.fn(),
@@ -47,25 +69,7 @@ describe('SoporteService (CU24: Mantenimiento en Taller & CU25: Retorno y RAMS)'
           ...m,
         }),
       ),
-      createQueryBuilder: jest.fn().mockReturnValue({
-        leftJoinAndSelect: jest.fn().mockReturnThis(),
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getManyAndCount: jest.fn().mockResolvedValue([
-          [
-            {
-              id_mantenimiento: 1,
-              id_computadora: 5,
-              estado: EstadoMantenimiento.PENDIENTE_TALLER,
-              fecha_hora_ingreso: new Date(),
-            },
-          ],
-          1,
-        ]),
-      }),
+      createQueryBuilder: jest.fn().mockReturnValue(mockMantenimientoQb),
     };
 
     mockRetornoRepo = {
@@ -108,8 +112,26 @@ describe('SoporteService (CU24: Mantenimiento en Taller & CU25: Retorno y RAMS)'
       save: jest.fn().mockImplementation((a) => Promise.resolve(a)),
     };
 
+    mockUsuarioQb = {
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([
+        {
+          id_usuario: 3,
+          nombres: 'CARLOS',
+          apellidos: 'PEREZ',
+          correo_institucional: 'carlos@uagrm.edu.bo',
+          password_hash: 'secret',
+          activo: true,
+        },
+      ]),
+    };
+
     mockUsuarioRepo = {
       findOne: jest.fn(),
+      createQueryBuilder: jest.fn().mockReturnValue(mockUsuarioQb),
     };
 
     mockAuditoriaService = {
@@ -322,6 +344,25 @@ describe('SoporteService (CU24: Mantenimiento en Taller & CU25: Retorno y RAMS)'
 
       expect(res.pagina).toBe(3);
       expect(res.limite).toBe(20);
+    });
+
+    it('debe filtrar por id_usuario_tecnico si el usuario tiene rol TECNICO y no ADMINISTRADOR', async () => {
+      await service.getOrdenesTaller({}, 8, ['TECNICO']);
+
+      expect(mockMantenimientoQb.andWhere).toHaveBeenCalledWith(
+        'm.id_usuario_tecnico = :idTecnico',
+        { idTecnico: 8 },
+      );
+    });
+
+    it('no debe filtrar por id_usuario_tecnico si el usuario es ADMINISTRADOR', async () => {
+      mockMantenimientoQb.andWhere.mockClear();
+      await service.getOrdenesTaller({}, 8, ['TECNICO', 'ADMINISTRADOR']);
+
+      expect(mockMantenimientoQb.andWhere).not.toHaveBeenCalledWith(
+        'm.id_usuario_tecnico = :idTecnico',
+        expect.anything(),
+      );
     });
   });
 
@@ -575,4 +616,27 @@ describe('SoporteService (CU24: Mantenimiento en Taller & CU25: Retorno y RAMS)'
       );
     });
   });
+
+  // -----------------------------------------------------------------
+  // CU24: LISTADO DE TÉCNICOS ACTIVOS
+  // -----------------------------------------------------------------
+  describe('getTecnicos', () => {
+    it('debe consultar técnicos activos con el rol TECNICO ordenados por nombre', async () => {
+      const res = await service.getTecnicos();
+
+      expect(mockUsuarioRepo.createQueryBuilder).toHaveBeenCalledWith('u');
+      expect(mockUsuarioQb.innerJoin).toHaveBeenCalledWith('u.roles', 'r');
+      expect(mockUsuarioQb.where).toHaveBeenCalledWith('r.nombre = :rol', {
+        rol: 'TECNICO',
+      });
+      expect(mockUsuarioQb.andWhere).toHaveBeenCalledWith('u.activo = :activo', {
+        activo: true,
+      });
+      expect(mockUsuarioQb.orderBy).toHaveBeenCalledWith('u.nombres', 'ASC');
+      expect(res).toHaveLength(1);
+      expect(res[0].nombres).toBe('CARLOS');
+      expect((res[0] as any).password_hash).toBeUndefined();
+    });
+  });
 });
+
