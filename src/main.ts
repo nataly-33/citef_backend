@@ -10,11 +10,14 @@ async function bootstrap() {
   // Prefijo global de API
   app.setGlobalPrefix('api/v1');
 
-  // Habilitar CORS para el frontend de Angular (puerto 4200)
+  // Habilitar CORS dinámico reflejando el origen para soportar credentials con cualquier IP/puerto
   app.enableCors({
-    origin: ['http://localhost:4200', 'http://127.0.0.1:4200'],
+    origin: (origin, callback) => {
+      callback(null, true);
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders: 'Content-Type,Accept,Authorization,X-Requested-With',
   });
 
   // Validaciones globales de DTOs con class-validator
