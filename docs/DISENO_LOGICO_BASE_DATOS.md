@@ -155,7 +155,6 @@ classDiagram
 
 Gestiona las identidades institucionales, autenticación mediante tokens criptográficos, Control de Acceso Basado en Roles (RBAC) y la trazabilidad inalterable de auditoría para Decanatura.
 
----
 
 #### 1.1. Tabla / Clase: `usuario` (`Usuario`)
 * **Propósito:** Almacena las cuentas de acceso de todos los operadores del sistema (Jefatura, Auxiliares de Laboratorio, Docentes y Técnicos de Soporte).
